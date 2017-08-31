@@ -1,35 +1,14 @@
-"""
-Update this to not use '*'
-"""
-#from pyRep import *# MagRepGroup, NucRepGroup, BasisVectorCollection, BasisVectorGroup, BasisVector
-#from pyData import *
-# Need weakref for child/parent?
-
-# Personal modules:
-from . import pyRep, pyData
-
 import numpy as np
 import periodictable as pt
-import string, inspect, pdb #cmath?
+import string, inspect
 from lmfit import minimize, Parameters, conf_interval, Minimizer
 from lmfit.printfuncs import report_fit, report_ci
 from pymatgen.io.cif import CifFile, CifParser
 from itertools import combinations_with_replacement, product
-from copy import deepcopy
 from collections import OrderedDict
 from cmath import polar
 rec2pol = np.vectorize(polar)
 
-
-"""
-# -----
-Now for the parts pertaining to the crystal model
-pyCryst
-TODO:
-* Include the SpacegroupFactory and PointgroupFactory from Mantid.
-    * See also GSAS-II for spacegroup lists in hard code (python)
- -----
-"""
 class Atom(object):
     """
     ...
@@ -39,7 +18,8 @@ class Atom(object):
     ----------
     TODO:
     * 
-    """    
+    """
+
     def __init__(self, elname, oxidation, label=None, parent=None):
         """
         TODO:
@@ -76,15 +56,15 @@ class Atom(object):
         self.setParent(parent)
         
         return
-    #
+
     def getNeutronScatteringLength(self):
         """
         The neutron coherent scattering length is pulled from the 'pt' module <-- will we need to make sure the incident NEUTRON WAVELENGTH is incorporated?
         UNITS: The scattering lengths are given here in femtometers (fm). 
         UNITS: We will divide the calculated factors by 10 so that when they are squared, the units are in barn (since barn = 100 fm^2).
         """
-        return pt.elements.isotope(self.element).neutron.b_c / 10. 
-    #
+        return pt.elements.isotope(self.element).neutron.b_c / 10.
+
     def setLocation(self, frac_coords, ang_coords, a, b, c, alpha, beta, gamma):
         """
         TODO:
@@ -101,7 +81,7 @@ class Atom(object):
         self.gamma = gamma
         
         return
-    #   
+
     def rlu2ang(self, Q):
         """
         TODO:
@@ -119,7 +99,7 @@ class Atom(object):
         #Q[:,2] = Q[:,2]*2.*np.pi/self.nuclear.c
         #print(Q)
         return Q
-        # 
+
     def setParent(self, parent):
         """
         This function creates a reference to the parent NuclearStructure class.
@@ -128,8 +108,8 @@ class Atom(object):
         elif not isinstance(parent, (NuclearStructure, pyRep.BasisVectorCollection)): raise TypeError('Atoms expect a NuclearStructure or BasisVectorCollection type as their parent. Please provide a proper object to reference.') 
         self.nuclear = parent
         return
-    #
-#
+
+
 class MagAtom(Atom):
     """
     ...
@@ -138,7 +118,7 @@ class MagAtom(Atom):
     ...
     ----------
     TODO:
-    <done> See getFormFactor to include the form factor generator for this species at a given Q.
+    <done> See get_form_factor to include the form factor generator for this species at a given Q.
     * This is being implemented in Mantid -- eventually make that switch over. 
     <done> Include the Lande g-factor
     * Eventually, it would be nice to have a lookup table for the gj.
@@ -173,15 +153,15 @@ class MagAtom(Atom):
         self.bvc = basisvectorcollection
             
         return
-    #
+
     def ff(self, Qm, **kwargs):
         """
-        Convenience alias for getFormFactor
+        Convenience alias for get_form_factor
         """
-        return self.getFormFactor(Qm, **kwargs)
-    #
-    def getFormFactor(self, Qm, rlu=True, S=1/2, L=3, 
-                      orbital=True, return_Q=False):
+        return self.get_form_factor(Qm, **kwargs)
+
+    def get_form_factor(self, Qm, rlu=True, S=1 / 2, L=3,
+                        orbital=True, return_Q=False):
         """
         TODO:
         <done> Qm is converted from rlu to ang within the routine.
@@ -222,14 +202,14 @@ class MagAtom(Atom):
             return Q, fQ, gJ
         else:
             return np.repeat(fQ.reshape((len(Qm),1)), 3, axis=1)
-    #  
+
     @property
     def phase(self, N=None):
         """
         Should actually just be an 
         """
         return
-    #    
+
     def addMoment(self, m, phi=0, normalize=True):
         """"""
         if self.phi is not None: phi=self.phi
@@ -241,7 +221,7 @@ class MagAtom(Atom):
                 pass
         self.moment = self.mu*m.reshape((1,3))
         return
-    #  
+
     def getMoment(self, N=None):
         """"""
         if N is not None:
@@ -249,11 +229,11 @@ class MagAtom(Atom):
             return np.repeat(self.moment, N, axis=0)
         else:
             return self.moment
-    #
+
     def setMomentFromIR(self, m, phi=0):
         
         return
-    #
+
     def setMomentSize(self, mu=None):
         if mu is None:
             pass
@@ -261,7 +241,7 @@ class MagAtom(Atom):
             self.mu = mu
             self.addMoment(self.moment)
         return
-    #
+
     def setPhase(self,phi=None):
         """"""
         if phi is None:
@@ -270,22 +250,22 @@ class MagAtom(Atom):
             self.phi = phi
             self.addMoment(self.moment)        
         return
-    #    
+
     def getMomentSize(self):
         """
         TODO:
         * Confirm defintion of moment size in terms of self.moment, then normalize by proper factor to put something like np.norm(self.moment) in Bohr magneton.
         """
         return np.linalg.norm(self.moment)
-    #
+
     def setParent(self, parent):
         """"""
         if parent is None: pass
         elif not isinstance(parent, (MagneticStructure, BasisVectorCollection)): raise TypeError('MagneticAtoms expect a MagneticStructure or BasisVectorCollection type as their parent. Please provide a proper object to reference.') 
         else: setattr(self, parent.familyname, parent)        
         return
-    #    
-#
+
+
 class AtomGroup(OrderedDict):
     """
     ...
@@ -305,7 +285,7 @@ class AtomGroup(OrderedDict):
             #for atom in atoms:
                 #self[atom.label] = atom
         return
-    #
+
     def checkAtoms(self, atoms):
         """"""
         try: 
@@ -317,7 +297,8 @@ class AtomGroup(OrderedDict):
             except AssertionError:
                 print('Not a good input to atoms')
         return atoms
-#
+
+
 class MagAtomGroup(AtomGroup):
     """
     ...
@@ -335,20 +316,21 @@ class MagAtomGroup(AtomGroup):
         if magatoms is not None: self.magatoms = list(magatoms)
         self.setqms()
         return
-    #
+
     def checkMagAtomGroup(self):
         """
         This function will implement a check on moments of the constituent atoms to make sure they are of the right type and shape as expected.
         """
         return
-    #
+
     def setqms(self):
         """
         TODO:
         * This should be present in the BasisVectorCollection only.
         """
         return
-    #
+
+
 class NuclearStructure(object):
     """
     TODO:
@@ -381,7 +363,7 @@ class NuclearStructure(object):
         
         
         return
-    #
+
     def setStructure(self, cifname=None, structure_info=None):
         """"""
         if cifname is not None:
@@ -408,7 +390,7 @@ class NuclearStructure(object):
             
             
         return 
-    #
+
     def setLattice(self, struc):
         """
         TODO:
@@ -431,7 +413,7 @@ class NuclearStructure(object):
         self.abc_angles = (self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
         
         return
-    #
+
     def placeAtoms(self, struc):
         """"""
         
@@ -442,7 +424,7 @@ class NuclearStructure(object):
             self.atoms.append(atom)        
         
         return
-    #
+
     @staticmethod
     def getElementName(site):
         """
@@ -458,7 +440,7 @@ class NuclearStructure(object):
         elname = elname.translate(elall, elnolet)
         
         return elname   
-    #    
+
     @staticmethod
     def getOxidationState(site):
         """
@@ -476,7 +458,7 @@ class NuclearStructure(object):
         charge = charge.translate(elall, elnolet)
         
         return charge 
-    #
+
     def setNames(self):
         """
         Eventually make this point to the AtomGroup.names (or just be able to pull it as a Child)
@@ -484,15 +466,7 @@ class NuclearStructure(object):
         for atom in self.atoms:
             self.names.append(atom.element)
         return
-    #
-    def getUniqueLabels():
-        """
-        TODO:
-        * Move to AtomGroup
-        """
-        
-        return
-    #
+
     def setLabels(self):
         """
         TODO:
@@ -508,7 +482,7 @@ class NuclearStructure(object):
                 else: pass
                 
         return
-    #
+
     def rlu2ang(self, Q):
         """
         TODO:
@@ -521,7 +495,7 @@ class NuclearStructure(object):
         Q[:,2] = Q[:,2]*2.*np.pi/self.c
         
         return Q
-    #    
+
     @staticmethod
     def makeQ(Qmax=4, firstQuad=False, sym=True, plane='hhl'):
         """
@@ -571,7 +545,7 @@ class NuclearStructure(object):
             Q = np.vstack((Q[:,0],Q[:,1],np.zeros(Q[:,1].shape))).transpose()        
             
         return Q 
-    #
+
     def setNuclearStructureFactor(self, Q=None, units=None):
         """
         *! This and similar operations should probably happen at the level of Crystal!!!
@@ -581,7 +555,7 @@ class NuclearStructure(object):
         # Construct the MagneticStructureFactorModel with 
         self.Fn = pyData.NuclearStructureFactorModel(self.Q, np.zeros(np.max(self.Q.shape), dtype=complex))#, units=units)
         return
-    #    
+
     def getNuclearStructureFactor(self, useDebyeWaller=False, squared=True, scale_factor=1., x0=1, y0=0, Q=None):
         """
         Q is given in units of rlu
@@ -632,7 +606,7 @@ class NuclearStructure(object):
             else:
                 #print("Structure factor for "+str(Q)+" is:"+str(Fn))                
                 return sqrt(scale_factor)*Fn            
-    #   
+
     def claimChildren(self, family=['atoms']):
         """
         This is performed in the init stage so that all consitituents of the Nuclear Structure may back-refernece it by name.
@@ -647,7 +621,7 @@ class NuclearStructure(object):
                     each_child.setParent(self)
             elif child is not None: child.setParent(self)
         return
-    #   
+
     def setParents(self, parents, **kwargs):
         """
         This method sets the parent reference of NuclearStructures to a Cystal and returns a TypeError if the parent is of the wrong type
@@ -669,7 +643,8 @@ class NuclearStructure(object):
         else:
             self.setParents([parents])  
         return
-#
+
+
 class MagneticStructure(NuclearStructure):
     """"""
     def __init__(self, magnames=None, magatoms=None, nuclear=None, qms=None,\
@@ -705,7 +680,7 @@ class MagneticStructure(NuclearStructure):
         if self.nuclear is not None: self.setMagneticStructure()
   
         return
-    #
+
     def setMagneticStructure(self):
         """
         TODO:
@@ -727,7 +702,7 @@ class MagneticStructure(NuclearStructure):
         #self.setFormFactor()
         
         return 
-    #    
+
     def setMagneticStructureFactor(self, Q=None, units=None):
         """
         TODO:
@@ -750,7 +725,7 @@ class MagneticStructure(NuclearStructure):
         self.Fm = pyData.MagneticStructureFactorModel(coords, np.zeros(coords.shape, dtype=np.complex128), units=units)
         
         return
-    #
+
     def getMagneticStructureFactor(self, gjs=None, useDebyeWaller=False,
                                    squared=True, returned=False, 
                                    scale_factor=1., Qm=None, update=True,
@@ -859,16 +834,16 @@ class MagneticStructure(NuclearStructure):
                 return Fm
             else:
                 return  Fm             
-    #
+
     def setMagneticRefinement(self, params, **kwargs):
         """"""
         self.fitter = Minimizer(self.residual, params, **kwargs)
         return
-    #
+
     def refineMagneticStructure(self, params=None, **kwargs):
         self.res = self.fitter.minimize(params=params, **kwargs)
         return self.res
-    #
+
     def residual(self, params, **kwargs):
         self.update(params, Qm=self.Fexp.coords, returned=False, update=True, 
                     **kwargs)
@@ -877,7 +852,7 @@ class MagneticStructure(NuclearStructure):
         err = self.Fexp.errors
         res = (data - calc) / err
         return res  
-    #
+
     def update(self, params, **kwargs):
         Nrep = self.crystal.magrepgroup.IR0 
         # vector direction
@@ -900,7 +875,7 @@ class MagneticStructure(NuclearStructure):
             
         self.getMagneticStructureFactor(**kwargs)
         return
-    #
+
     def rlu2ang(self, Q):
         """
         TODO:
@@ -918,19 +893,19 @@ class MagneticStructure(NuclearStructure):
         #Q[:,2] = Q[:,2]*2.*np.pi/self.nuclear.c
         #print(Q)
         return Q
-    #
+
     def getMagneticDiffraction():
         """"""
         
         return
-    #
+
     def claimChildren(self, family=['magatoms']):
         """
         This function sets the Children according to the NuclearStructure defintion
         """
         super(MagneticStructure, self).claimChildren(family=family)
         return
-    #
+
     def setParents(self, parents):
         """
         This method sets the parent reference of NuclearStructures to a Cystal and returns a TypeError if the parent is of the wrong type
@@ -949,25 +924,12 @@ class MagneticStructure(NuclearStructure):
         else:
             self.setParents([parents])  
         return    
-    #
+
     def setSibling(self, family=['nuclear']):
         """"""
         return
-#
-class ChargeDensity(NuclearStructure):
-    """
-    A ChargeDensity class extends the NuclearStructure to include charge density which could be fitted against charge sensitive probes (e.g., x-ray).
-    """
-    def __init__(self, cifname=None, structure_info=None):
-        """"""
-        
-        # Set up the Crystal family
-        self.familyname = 'charge'        
 
 
-        return
-    #
-#
 class Crystal(object):
     """
     A Crystal object is a collection of a NuclearStructure and its subclasses.
@@ -1003,7 +965,7 @@ class Crystal(object):
         
         self.claimChildren()
         return
-    #
+
     def getMagneticMoments(self, Nrep=1, bvs=None, coeffs=None, mu=None):
         """
         TODO:
@@ -1025,12 +987,12 @@ class Crystal(object):
             magatom.addMoment(self.magrepgroup.getMagneticMoment(d=magatom.d, Nrep=Nrep))
         
         return
-    #
+
     def setChild(self, child):
         """"""
         setattr(self, child.familyname, child)
         return
-    #
+
     def claimChildren(self, family=['nuclear', 'magnetic', 'charge']):
         """
         This is performed in the init stage so that all consitituents of the Crystal may back-refernece it by name
@@ -1041,9 +1003,8 @@ class Crystal(object):
                 setattr(child,'crystal',self)
                 setattr(self, 'label',  child)
         return
-    #
-    def setAliases(self, 
-                        source_alias_pairs={'magrepgroup':'magnetic'}):
+
+    def setAliases(self, source_alias_pairs={'magrepgroup':'magnetic'}):
         """
         This is performed in the init stage so that some children can access
         certain global componenets directly.
@@ -1055,10 +1016,8 @@ class Crystal(object):
         for sa, so, ao in zip(source_attrs, source_objs, alias_objs):
             setattr(ao, sa, so)
         return
-    #    
-    def setStructureFactor(self, Qm=None, Fm_exp=None, Fm_err=None, 
-                           Qn=None, Fn_exp=None, Fn_err=None, 
-                           units=None, **kwargs):
+
+    def setStructureFactor(self, Qm=None, Fm_exp=None, Fm_err=None, Qn=None, Fn_exp=None, Fn_err=None, **kwargs):
         """"""
         if (Qn is None) and (Qm is None):
             print('Need Q values and F values!')
@@ -1087,9 +1046,8 @@ class Crystal(object):
             self.magnetic.Fm.values = Fm        
             self.Fm = self.magnetic.Fm
             self.magnetic.magrepgroup
-            
         return
-    #
+
     def rietveld_refinement(self, Nreps_fit=[], Qs_fit=None):
         """
         Driver for the refinement
@@ -1138,15 +1096,14 @@ class Crystal(object):
         out = res
         self.F.plotStructureFactor(vmax=vmax)
         return out
-    #
+
     def plot(self):
         vis = StructureVis(**kwargs)
         vis.set_structure(self)# FIX
         vis.show()
         return vis
-    #
-    def calc_Fm(self, Nrep=2, bvs=[2], mu=1.5,
-                 **kwargs):        
+
+    def calc_Fm(self, Nrep=2, bvs=[2], mu=1.5, **kwargs):
         rep_name = 'G'+str(Nrep)
         rep_names=[]
         for bv in bvs:
@@ -1161,7 +1118,7 @@ class Crystal(object):
         Fm = self.magnetic.getMagneticStructureFactor(Qm=self.Qm, 
                                                       squared=True)
         return Fm
-    #
+
     @staticmethod
     def residual(params, self, Nreps=[1]):
         """
@@ -1194,22 +1151,11 @@ class Crystal(object):
         for data in list(self.data.values()):
             res += (data.F.values - self.F.values[data.idx]) / data.F.errors
         return res
-    #
-#
-class Powder(object):
-    """
-    A Powder object is a collection of NuclearStructure and its subclasses, with supplements to treat isotropically averaged experimental data.
-    """
-    def __init__(self):
-        """"""
-        return
-    #
-#
-#
+
+
 # --------------
 # Define some general helper methods
 # --------------
-
 def getTrimmedAttributes(obj):
     """
     This function returns a list of attributes of the input object (class) as a list of tuples each of the form: ('field', <instance>)
@@ -1217,7 +1163,8 @@ def getTrimmedAttributes(obj):
     """
     attributes = inspect.getmembers(obj, lambda a:not(inspect.isroutine(a)))
     return [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
-#
+
+
 def getFamilyAttributes(obj, family, return_labels=False):
     """"""
     attr = getTrimmedAttributes(obj)
@@ -1236,7 +1183,8 @@ def getFamilyAttributes(obj, family, return_labels=False):
         return attrs, lbls
     else:
         return attrs
-#
+
+
 def stripDigits(name):
     """"""
     pstr = string.digits 
@@ -1245,4 +1193,3 @@ def stripDigits(name):
     nodig = allNames.translate(allNames, pstr)
     name = name.translate(allNames, nodig)        
     return name
-#
