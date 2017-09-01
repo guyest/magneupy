@@ -1,9 +1,3 @@
-"""
-Update this to not use '*'
-"""
-#from pyCrystal import *
-#from pyData import *
-
 import numpy, string, inspect, re, fnmatch, pandas
 from collections import Iterable, namedtuple, OrderedDict, deque
 

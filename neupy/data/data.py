@@ -9,8 +9,6 @@ import uncertainties as unc
 from uncertainties import unumpy as unp
 from numpy.matlib import repmat
 from collections import namedtuple, Iterable, OrderedDict
-from scipy.interpolate import griddata
-from scipy import constants
 from copy import deepcopy, copy
 from lmfit import Model
 import pickle as pkl

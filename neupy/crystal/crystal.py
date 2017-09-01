@@ -7,6 +7,7 @@ from pymatgen.io.cif import CifFile, CifParser
 from itertools import combinations_with_replacement, product
 from collections import OrderedDict
 from cmath import polar
+from .help import *
 rec2pol = np.vectorize(polar)
 
 class Atom(object):
@@ -1128,68 +1129,26 @@ class Crystal(object):
         coeffs = {} # move to self?
         for param in params:
             coeffs[str(param)] = params[str(param)]
-            
+
         for irrep in list(self.magrepgroup.values()): #Nrep in Nreps:
             Nrep = irrep.N
             # First update the magnetic moments according to the modified basis vector coefficients:
             self.getMagneticMoments(Nrep=Nrep, coeffs=coeffs)
             #self.getNuclearSites(params=params) # for adjusting after fitting the lattice?
-        
+
         # Then update the structure factor calculations
         # add units to all these eventually
         self.nuclear.setNuclearStructureFactor()
-        self.nuclear.getNuclearStructureFactor(scale_factor=params['scale_factor'])  
+        self.nuclear.getNuclearStructureFactor(scale_factor=params['scale_factor'])
         self.magnetic.setMagneticStructureFactor()
         self.magnetic.getMagneticStructureFactor(scale_factor=params['scale_factor'])
-        self.setStructureFactor() 
-        
+        self.setStructureFactor()
+
         # ...
         # Anything else?
-        
+
         # Then, compute the difference between the new model and the data
         res = 0.
         for data in list(self.data.values()):
             res += (data.F.values - self.F.values[data.idx]) / data.F.errors
         return res
-
-
-# --------------
-# Define some general helper methods
-# --------------
-def getTrimmedAttributes(obj):
-    """
-    This function returns a list of attributes of the input object (class) as a list of tuples each of the form: ('field', <instance>)
-    pulled from: http://stackoverflow.com/questions/9058305/getting-attributes-of-a-class
-    """
-    attributes = inspect.getmembers(obj, lambda a:not(inspect.isroutine(a)))
-    return [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
-
-
-def getFamilyAttributes(obj, family, return_labels=False):
-    """"""
-    attr = getTrimmedAttributes(obj)
-    attributes = []
-    if family is not None:
-        for fam in family:                    
-            attributes.append(attr.pop(attr.index((fam, obj.__getattribute__(fam)))))
-    
-    attrs = []
-    lbls  = []
-    for attribute in attributes:
-        lbl, attr, = attribute
-        lbls.append(lbl)
-        attrs.append(attr)
-    if return_labels:
-        return attrs, lbls
-    else:
-        return attrs
-
-
-def stripDigits(name):
-    """"""
-    pstr = string.digits 
-    name = name.encode('ascii','ignore')
-    allNames = string.maketrans('','')
-    nodig = allNames.translate(allNames, pstr)
-    name = name.translate(allNames, nodig)        
-    return name
