@@ -1,0 +1,101 @@
+{
+    "_meta": {
+        "hash": {
+            "sha256": "787b0159e9c2fe1ff289fa8c99aa0e1eeefd5ea3457aa8b8d2110ad186689b62"
+        },
+        "requires": {},
+        "sources": [
+            {
+                "url": "https://pypi.python.org/simple",
+                "verify_ssl": true
+            }
+        ]
+    },
+    "default": {
+        "certifi": {
+            "version": "==2017.7.27.1"
+        },
+        "chardet": {
+            "version": "==3.0.4"
+        },
+        "cycler": {
+            "version": "==0.10.0"
+        },
+        "h5py": {
+            "version": "==2.7.0"
+        },
+        "idna": {
+            "version": "==2.6"
+        },
+        "lmfit": {
+            "version": "==0.9.7"
+        },
+        "matplotlib": {
+            "version": "==2.0.2"
+        },
+        "monty": {
+            "version": "==1.0.1"
+        },
+        "mpmath": {
+            "version": "==0.19"
+        },
+        "numpy": {
+            "version": "==1.13.1"
+        },
+        "palettable": {
+            "version": "==3.0.0"
+        },
+        "pandas": {
+            "version": "==0.20.3"
+        },
+        "periodictable": {
+            "version": "==1.5.0"
+        },
+        "pydispatcher": {
+            "version": "==2.0.5"
+        },
+        "pymatgen": {
+            "version": "==2017.8.21"
+        },
+        "pyparsing": {
+            "version": "==2.2.0"
+        },
+        "python-dateutil": {
+            "version": "==2.6.1"
+        },
+        "pytz": {
+            "version": "==2017.2"
+        },
+        "requests": {
+            "version": "==2.18.4"
+        },
+        "ruamel.yaml": {
+            "version": "==0.15.33"
+        },
+        "scipy": {
+            "version": "==0.19.1"
+        },
+        "six": {
+            "version": "==1.10.0"
+        },
+        "spglib": {
+            "version": "==1.9.9.44"
+        },
+        "sympy": {
+            "version": "==1.1.1"
+        },
+        "tabulate": {
+            "version": "==0.7.7"
+        },
+        "uncertainties": {
+            "version": "==3.0.1"
+        },
+        "urllib3": {
+            "version": "==1.22"
+        },
+        "xarray": {
+            "version": "==0.9.6"
+        }
+    },
+    "develop": {}
+}
