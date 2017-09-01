@@ -1,13 +1,15 @@
+import string
+from cmath import polar
+from collections import OrderedDict
+from itertools import combinations_with_replacement, product
+
 import numpy as np
 import periodictable as pt
-import string, inspect
-from lmfit import minimize, Parameters, conf_interval, Minimizer
-from lmfit.printfuncs import report_fit, report_ci
+from lmfit import minimize, Parameters, Minimizer
 from pymatgen.io.cif import CifFile, CifParser
-from itertools import combinations_with_replacement, product
-from collections import OrderedDict
-from cmath import polar
-from .help import *
+
+from neupy.helper.functions import *
+
 rec2pol = np.vectorize(polar)
 
 class Atom(object):
