@@ -8,7 +8,7 @@ import periodictable as pt
 from lmfit import minimize, Parameters, Minimizer
 from pymatgen.io.cif import CifFile, CifParser
 
-from neupy.helper.functions import *
+from magneupy.helper.functions import *
 
 rec2pol = np.vectorize(polar)
 
