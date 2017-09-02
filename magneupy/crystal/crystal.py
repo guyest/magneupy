@@ -1,15 +1,6 @@
-import string
 from cmath import polar
-from collections import OrderedDict
-from itertools import combinations_with_replacement, product
-
-import numpy as np
-import periodictable as pt
 from lmfit import minimize, Parameters, Minimizer
-from pymatgen.io.cif import CifFile, CifParser
 
-from magneupy.helper.functions import *
-from magneupy.rep import *
 from magneupy.crystal.nuclear import *
 from magneupy.crystal.magnetic import *
 
