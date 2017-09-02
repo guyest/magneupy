@@ -1,1 +1,2 @@
-from magneupy.crystal.crystal import Crystal
+from .material import Crystal, NuclearStructure
+from . import magnetic

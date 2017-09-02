@@ -2,10 +2,8 @@ import numpy as np
 import periodictable as pt
 from lmfit import Minimizer
 
-from magneupy.helper.functions import *
-from magneupy.rep.rep import BasisVectorCollection, MagRepGroup
-from magneupy.crystal.nuclear import Atom, AtomGroup, NuclearStructure
-#from magneupy.crystal.crystal import Crystal
+from .material import Atom, AtomGroup, NuclearStructure, Crystal
+from .rep.rep import BasisVectorCollection, MagRepGroup
 
 class MagAtom(Atom):
     """
@@ -197,7 +195,7 @@ class MagAtomGroup(AtomGroup):
 
 class MagneticStructure(NuclearStructure):
     """"""
-    def __init__(self, magnames=None, magatoms=None, nuclear=None, qms=None, \
+    def __init__(self, magnames=None, magatoms=None, nuclear=None, qms=None,
                  Q=None, Qmax=7, Fexp=None, parents=None, plane=None):
         """
         TODO:
@@ -205,6 +203,7 @@ class MagneticStructure(NuclearStructure):
         <done> No direct input of MagneticStructure without a NuclearStructure.
         """
         # Set up the MagneticStructure family
+        self.qms = qms
         self.familyname = 'magnetic'
         self.setParents(parents) #<< Needs work? See Crystal.
         try:
@@ -276,10 +275,8 @@ class MagneticStructure(NuclearStructure):
 
         return
 
-    def getMagneticStructureFactor(self, gjs=None, useDebyeWaller=False,
-                                   squared=True, returned=False,
-                                   scale_factor=1., Qm=None, update=True,
-                                   S=1/2, L=3, plane='hhl', from_IR=True, **kwargs):
+    def getMagneticStructureFactor(self, gjs=None, useDebyeWaller=False, squared=True, returned=False, scale_factor=1.,
+                                   Qm=None, update=True, S=1/2, L=3, plane='hhl', from_IR=True, **kwargs):
         """
         gj is the Lande g-factor
         TODO:
@@ -478,5 +475,3 @@ class MagneticStructure(NuclearStructure):
     def setSibling(self, family=['nuclear']):
         """"""
         return
-
-
