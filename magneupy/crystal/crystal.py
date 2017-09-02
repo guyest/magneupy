@@ -22,12 +22,12 @@ class Crystal(object):
             try:
                 self.nuclear = NuclearStructure(cifname=nuclear)
             except:
-                pass
+                raise
         elif type(cifname) is str:
             try:
                 self.nuclear = NuclearStructure(cifname=cifname)
             except:
-                pass
+                raise
         else:
             self.nuclear = nuclear
         self.magnetic= mag
