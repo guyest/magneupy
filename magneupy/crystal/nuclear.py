@@ -6,6 +6,7 @@ from pymatgen.io.cif import CifFile, CifParser
 
 from magneupy.helper.functions import *
 from magneupy.rep.rep import BasisVectorCollection, NucRepGroup
+from magneupy import Crystal
 #from magneupy.crystal.crystal import Crystal
 
 
