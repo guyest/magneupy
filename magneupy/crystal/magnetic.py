@@ -5,7 +5,7 @@ from lmfit import Minimizer
 from magneupy.helper.functions import *
 from magneupy.rep.rep import BasisVectorCollection, MagRepGroup
 from magneupy.crystal.nuclear import Atom, AtomGroup, NuclearStructure
-from magneupy import Crystal
+from magneupy.crystal.crystal import Crystal
 
 class MagAtom(Atom):
     """
