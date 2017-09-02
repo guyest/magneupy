@@ -5,7 +5,8 @@ import periodictable as pt
 from pymatgen.io.cif import CifFile, CifParser
 
 from magneupy.helper.functions import *
-from magneupy.rep.rep import BasisVectorCollection
+from magneupy.rep.rep import BasisVectorCollection, NucRepGroup
+from magneupy import Crystal
 
 
 class Atom(object):
@@ -440,7 +441,7 @@ class NuclearStructure(object):
         errmsg = 'NuclearStructures expect a Crystal or NucRepGroup type as their parent. Please provide a Crystal type object to reference'
         errmsg = kwargs['errmsg'] if 'errmsg' in kwargs else errmsg
 
-        types  = (Crystal, rep.NucRepGroup)
+        types  = (Crystal, NucRepGroup)
         types  = kwargs['types'] if 'types'  in kwargs else types
 
         if hasattr(parents, '__iter__'):

@@ -3,8 +3,9 @@ import periodictable as pt
 from lmfit import Minimizer
 
 from magneupy.helper.functions import *
-from magneupy.rep.rep import BasisVectorCollection
+from magneupy.rep.rep import BasisVectorCollection, MagRepGroup
 from magneupy.crystal.nuclear import Atom, AtomGroup, NuclearStructure
+from magneupy import Crystal
 
 class MagAtom(Atom):
     """
@@ -460,7 +461,7 @@ class MagneticStructure(NuclearStructure):
         This method sets the parent reference of NuclearStructures to a Cystal and returns a TypeError if the parent is of the wrong type
         """
         errmsg = 'MagneticStructures expect a Crystal or MagRepGroup type as their parent. Please provide a Crystal type object to reference'
-        types  = (Crystal, pyRep.MagRepGroup)
+        types  = (Crystal, MagRepGroup)
 
         if hasattr(parents, '__iter__'):
             for parent in parents:
