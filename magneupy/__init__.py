@@ -1,1 +1,1 @@
-from .crystal import Crystal
+from magneupy.crystal.crystal import Crystal
