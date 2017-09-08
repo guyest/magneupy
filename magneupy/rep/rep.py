@@ -1,14 +1,6 @@
 import numpy, string, inspect, re, fnmatch, pandas
 from collections import Iterable, namedtuple, OrderedDict, deque
 
-# This section has built-in classes for various uses (i.e. the irrep class used for fitting)
-# TODO
-# * Make all classes have optional input which defaults to the default value of the corresponding object.
-#
-# -----
-# First for the parts pertaining to the ordering
-# pyRep
-# -----
 class Rep(OrderedDict):
     """
     This serves as a base class for the different magnetic and structure representation formalisms.
@@ -17,7 +9,8 @@ class Rep(OrderedDict):
         """"""
         super(Rep,self).__init__()
         return
-#
+
+
 class BasisVector(numpy.ndarray):
     """
     TODO:
@@ -52,8 +45,8 @@ class BasisVector(numpy.ndarray):
         for name in ['d', 'Nbv', 'Nrep', 'Nmagatom', 'name']:
             setattr(self, name, getattr(obj, name, None))
         return
-    #
-#
+
+
 class BasisVectorGroup(OrderedDict):
     """
     BasisVectorGroups are composed of all BasisVectors for equivalent atoms produced by a single Rep. 
@@ -72,7 +65,7 @@ class BasisVectorGroup(OrderedDict):
         self.name = 'psi'+str(Nbv)+'_'+str(Nunique_atom)
         
         return    
-    #
+
     def setBasisVectors(self, basisvectors):
         """"""
         basisvectors = list(basisvectors)
@@ -80,12 +73,12 @@ class BasisVectorGroup(OrderedDict):
             self[basisvector.name] = basisvector  
         self.setCoeff()
         return
-    #
+
     def setCoeff(self, coeff=1.+1j*0.):
         """"""
         self.coeff = coeff
         return
-    #
+
     def addBasisVector(self, basisvector):
         """
         TODO:
@@ -94,7 +87,7 @@ class BasisVectorGroup(OrderedDict):
         self[basisvector.name] = basisvector
         # set a coeff
         return
-    #
+
     def getMagneticMoment(self, d):
         """"""
         m = numpy.asanyarray([0.,0.,0.], dtype=numpy.complex_)
@@ -102,7 +95,7 @@ class BasisVectorGroup(OrderedDict):
             if numpy.isclose(d,bv.d).all():
                 m += bv * self.coeff        
         return m
-    #
+
     def checkBasisVectors(self):
         # Perform some checks to make sure the objects are what we think they are
         assert(isinstance(self.basisvectors, list))
@@ -116,9 +109,8 @@ class BasisVectorGroup(OrderedDict):
         for basisvector in self.basisvectors:
             assert(testbv.d == basisvector.d)  
         return
-    #
-    #def __len__(self): return len(self.basisvectors)
-#
+
+
 class BasisVectorCollection(Rep):
     """
     A BasisVectorCollection is a collection of BasisVectorGroups from different Reps but corresponding to the same atom. 
@@ -174,13 +166,13 @@ class BasisVectorCollection(Rep):
     
         qm2 = _property(_itemgetter(1), doc='Alias for field number 1')        
         return    
-    #
+
     def append(self):
         """"""
         self.bvs
         return
-    #
-#   
+
+
 class Irrep(OrderedDict):
     """
     An Irrep class is composed of BasisVectorGroups corresponding to each atomic site in the compound.
@@ -218,7 +210,7 @@ class Irrep(OrderedDict):
         self.defined= False
         
         return
-    #
+
     def setName(self, name=None):
         """"""
         if name is not None:
@@ -226,18 +218,18 @@ class Irrep(OrderedDict):
         else:
             self.name = 'G'+str(self.N)
         return
-    #
+
     def addBasisVectorGroup(self, frac_coord, psi):
         """"""
         
         self.psis
         return
-    #
+
     def getBasisVectorGroup(self, atom):
         """
         """
         return
-    #
+
     def checkIrrep(self):
         """
         TODO: 
@@ -246,35 +238,21 @@ class Irrep(OrderedDict):
         assert(len(bvg) == Natoms)
         # ...
         return
-    #
+
     def __add__(self, other):
         """"""
         return Corep([self, other])
     def __eq__(self, other):
         """"""
         return self.N == other.N
-    #
-    #
-    # Do these make sense?
-    #def __gt__(self, other):
-        #""""""
-        #return self.order > other.order
-    ##
-    #def __ge__(self, other):
-        #""""""
-        #return self.order >= other.order
-    ##
-    #def __lt__(self, other):
-        #""""""
-        #return self.order < other.order
-    ##    
-    #def __le__(self, other):
-        #""""""
-        #return self.order <= other.order
-    ##    
-    def __repr__(self): return repr(self.name)
-    def __str__(self): return str(self.copies)+'$\Gamma_{'+str(self.N)+'}^{'+str(self.order)+'}'
-#
+
+    def __repr__(self):
+        return repr(self.name)
+
+    def __str__(self):
+        return str(self.copies)+'$\Gamma_{'+str(self.N)+'}^{'+str(self.order)+'}'
+
+
 class Corep(Irrep):
     """
     A Corep class combines two or more Irreps into a single Corep which otherwise behaves just the same way. The net effect is to increase the size of the constituitive BasisVectorGroups.
@@ -289,7 +267,8 @@ class Corep(Irrep):
     def __init__(self, irreps):
         
         return
-#
+
+
 class MSG(Rep):
     """
     This is a Magnetic Space Group object.
@@ -304,8 +283,8 @@ class MSG(Rep):
     def __init__(self):    
         
         return NotImplemented
-    #
-#
+
+
 class RepGroup(OrderedDict):
     """
     > NOTE: This is a MUTEABLE type.
@@ -330,11 +309,11 @@ class RepGroup(OrderedDict):
         # Ready the input
         self.setReps(reps) # also claims reps as children
         return
-    #
+
     def setFamilyName(self, name='repgroup'):
         self.familyname = name   
         return
-    #
+
     def setRepCollection(self, repcollection, name='repcollection'):
         """"""
         if repcollection is not None:
@@ -343,7 +322,7 @@ class RepGroup(OrderedDict):
         else:
             setattr(self, name, repcollection)
         return
-    #
+
     def setReps(self, reps):
         """"""
         if reps is None: pass
@@ -358,13 +337,13 @@ class RepGroup(OrderedDict):
         for rep in self:
             setattr(self, rep.name, rep)
         return
-    #   
+
     def getBasisVectorCollection(self, d):
         """
         This function will return the BasisVectorCollection object corresponding to the set of BasisVectors at a particular magnetic site.
         """
         return
-    #
+
     def setParents(self, parents, **kwargs):
         """
         This method sets the parent reference of NuclearStructures to a Cystal and returns an AssertionError if the parent is of the wrong type
@@ -384,7 +363,7 @@ class RepGroup(OrderedDict):
         else:
             self.setParents([parents], errmsg=errmsg, types=types)        
         return
-    #
+
     def claimChildren(self, family = ['basisvectorcollection', 'basisvectorgroup'], child=None):
         """
         This is performed in the init stage so that all consitituents of the Nuclear Structure may back-refernece it by name.
@@ -403,16 +382,16 @@ class RepGroup(OrderedDict):
             label, child = a
             if child is not None: child.setParent(self)        
         return 
-    # 
 
-#
+
 class NucRepGroup(RepGroup):
     """
     TODO:
     * For implementing structural distortions
     """
     pass
-#
+
+
 class MagRepGroup(OrderedDict):
     """
     A MagRep class is a collection of Reps (MSG, Irrep, Corep, etc.) for magnetic order in a given system.
@@ -449,7 +428,7 @@ class MagRepGroup(OrderedDict):
             self.readSarahSummary(sarahfile)
             return        
         return
-    #
+
     def setReps(self, reps):
         """"""
         if reps is None: pass
@@ -464,7 +443,7 @@ class MagRepGroup(OrderedDict):
         for rep in self:
             setattr(self, rep.name, rep)
         return
-    #      
+
     def setRepCollection(self, repcollection, rcname='magrepcollection'):
         """
         TODO:
@@ -476,7 +455,7 @@ class MagRepGroup(OrderedDict):
         else:
             setattr(self, rcname, repcollection)
         return
-    #   
+
     def addBasisVector(self, bv, Nirrep=None, Nbv=None, Nunique_atom=None, Natom=None):
         """
         TODO:
@@ -487,7 +466,7 @@ class MagRepGroup(OrderedDict):
         self['G'+str(Nirrep)]['psi'+str(Nbv)+'_'+str(Nunique_atom)].addBasisVector(bv)
         
         return
-    #
+
     def sarah2pyRep(self, lines, lid=None, **kwargs):
         """"""
         #line = str(line)
@@ -584,7 +563,7 @@ class MagRepGroup(OrderedDict):
                 dx, dy, dz = tuple(re.findall(r'[.]?\d+', d))
                 ds[str(Natom)+'_'+str(Nunique_a)] = numpy.asanyarray([float(dx),float(dy),float(dz)])   
             return ds, Natoms
-    #
+
     def readSarahSummary(self, filename):
         """
         Definitely not most efficient, but quick and dirty
@@ -691,11 +670,11 @@ class MagRepGroup(OrderedDict):
             #self
             pass
         return
-    #    
+
     def setFamilyName(self, name='magrepgroup'):
         self.familyname = 'magrepgroup' 
         return
-    #
+
     def getMagneticMoment(self, d, Nrep=None):
         """"""
         if Nrep is None: Nrep = self.IR0
@@ -703,20 +682,20 @@ class MagRepGroup(OrderedDict):
         for bvg in list(self['G'+str(Nrep)].values()):
             m += bvg.getMagneticMoment(d)
         return m
-    #
+
     def setBasisVectorCollection(self, basisvectorcollection=None):
         """"""
         self.basisvectorcollection = basisvectorcollection
         self.bvc = self.basisvectorcollection # alias
         return
-    #
+
     def setParents(self, parents):
         """"""
         errmsg = 'MagRepGroups expect a Crystal or MagRepCollection object as parent. Plase give an appropiate object to reference.'
         types = (MagRepCollection,Crystal)
         super(MagRepGroup, self).__setParents__(parents, errmsg=errmsg, types=types)
         return
-    #
+
     def claimChildren(self, family = ['basisvectorcollection', 'basisvectorgroup'], child=None):
         """
         This is performed in the init stage so that all consitituents of the Nuclear Structure may back-refernece it by name.
@@ -735,18 +714,21 @@ class MagRepGroup(OrderedDict):
             label, child = a
             if child is not None: child.setParent(self)        
         return 
-    #     
-#
+
+
 class RepCollection(OrderedDict):
     """
     > NOTE: This is a MUTEABLE type.
     TODO:
     * Decide if this is neccessary...
     """
-    
+    pass
+
+
 class MagRepCollection(RepCollection):
     """"""
     pass
+
 
 def getTrimmedAttributes(obj):
     """
@@ -755,6 +737,7 @@ def getTrimmedAttributes(obj):
     """
     attributes = inspect.getmembers(obj, lambda a:not(inspect.isroutine(a)))
     return [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
+
 
 def getFamilyAttributes(obj, family):
     """"""

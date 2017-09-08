@@ -228,6 +228,12 @@ class NuclearStructure(object):
         self.volume = struc.lattice.volume
         self.angles = (self.alpha, self.beta, self.gamma)
         self.abc_angles = (self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
+        self._matrix = struc.lattice.matrix
+        self.basis = (self._matrix[0,:], self._matrix[1,:], self._matrix[2,:])
+        ar = 2.*np.pi * np.cross(self.basis[1],self.basis[2]) / self.volume
+        br = 2.*np.pi * np.cross(self.basis[2], self.basis[0]) / self.volume
+        cr = 2.*np.pi * np.cross(self.basis[0], self.basis[1]) / self.volume
+        self.recip = (ar,br,cr)
 
         return
 

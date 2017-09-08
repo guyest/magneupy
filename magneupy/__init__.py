@@ -1,2 +1,2 @@
 from .material import Crystal, NuclearStructure
-from . import magnetic
+from .rep import MagRepGroup
