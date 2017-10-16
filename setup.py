@@ -4,7 +4,7 @@ setup(
     name='magneupy',
     version='0.1.1',
     packages=['magneupy', 'magneupy.rep', 'magneupy.data', 'magneupy.util'],
-    install_requires=['pymatgen','periodictable','uncertainties','numpy','lmfit','h5py','xarray','scipy'],
+    install_requires=['pymatgen','periodictable','uncertainties','numpy','lmfit','h5py','xarray','scipy','sh'],
     url='https://github.com/guygma/magneupy',
     license='MIT',
     author='Guy Marcus',

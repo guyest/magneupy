@@ -1,6 +1,10 @@
 import numpy as np
 import periodictable as pt
 from lmfit import Minimizer
+import tempfile
+import sh
+basireps = sh.Command('./basireps_mac')
+tempfile.tempdir = '/var/tmp'
 
 from .material import Atom, AtomGroup, NuclearStructure, Crystal
 from .rep.rep import BasisVectorCollection, MagRepGroup
@@ -44,7 +48,8 @@ class MagAtom(Atom):
 
         # Set the BasisVectorGroup for this magnetic atom from the parent Irrep.
         # This contains the coefficients used for fitting the structure.
-        if not isinstance(basisvectorcollection, (type(None), pyRep.BasisVectorCollection)): raise TypeError('The basisvectorcollection variable expects input to be a BasisVectorCollection object.')
+        if not isinstance(basisvectorcollection, (type(None), BasisVectorCollection)):
+            raise TypeError('The basisvectorcollection variable expects input to be a BasisVectorCollection object.')
         self.bvc = basisvectorcollection
 
         return
@@ -203,7 +208,7 @@ class MagneticStructure(NuclearStructure):
         <done> No direct input of MagneticStructure without a NuclearStructure.
         """
         # Set up the MagneticStructure family
-        self.qms = qms
+        self.setqms(qms)
         self.familyname = 'magnetic'
         self.setParents(parents) #<< Needs work? See Crystal.
         try:
@@ -215,7 +220,10 @@ class MagneticStructure(NuclearStructure):
         self.nuclear = nuclear
 
         self.magnames = magnames
-        self.Q = self.makeQ(Qmax=Qmax, plane=plane) if Q is None else Q
+        self.magname  = self.magnames[0]
+        kwargs = {}
+        if plane is not None: kwargs['plane'] = plane
+        self.Q = self.makeQ(Qmax=Qmax, **kwargs) if Q is None else Q
         self.Fexp = None if Fexp is None else Fexp
 
         # Preallocate fitting fields.
@@ -223,11 +231,21 @@ class MagneticStructure(NuclearStructure):
         self.res = None
 
         if magatoms is None: self.magatoms = MagAtomGroup()
-        elif not isinstance(magatoms, (MagAtomGroup)): raise TypeError('The magatoms variable expects input to a be a MagAtomGroup object.')
+        elif not isinstance(magatoms, (MagAtomGroup)):
+            raise TypeError('The magatoms variable expects input to a be a MagAtomGroup object.')
         else: self.magatoms = magatoms
 
-        if self.nuclear is not None: self.setMagneticStructure()
+        if self.nuclear is not None:
+            self.setMagneticStructure()
 
+        self.gen_smb()
+
+        return
+
+    def setqms(self, qms):
+        """"""
+        self.qms = iter(qms)
+        self.qm = self.qms.__next__()
         return
 
     def setMagneticStructure(self):
@@ -440,6 +458,33 @@ class MagneticStructure(NuclearStructure):
         #Q[:,2] = Q[:,2]*2.*np.pi/self.nuclear.c
         #print(Q)
         return Q
+
+    def gen_smb(self):
+        smb = []
+        smb.append('TITLE ' + self.crystal.name + '\n')
+        smb.append('SPGR ' + self.crystal.spacegroup + '\n')
+        smb.append('KVEC ' + str(self.qm).strip('[]') + '\n')
+        smb.append('SUBL ' + self.magname + ' ' + str(len(self.magatoms)) + '\n')
+        for ma in self.magatoms.values():
+            smb.append('At ' + str(ma.d).strip('[]') + '\n')
+        smb.append('BASIR AXIAL CEL\n')
+        self.smb = smb
+        return
+
+    def gen_basireps(self):
+        """"""
+        # open a temporary directory and perform calculations using BasIreps
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(tmpdir + '/bas.smb', 'w') as f:
+                f.writelines(self.smb)
+            basireps(tmpdir + '/bas.smb')
+            with open(tmpdir + '/bas.fp', 'r+') as f:
+                f.seek(0)
+                self.fp = f.readlines()
+            with open(tmpdir + '/bas.bsr', 'r+') as f:
+                f.seek(0)
+                self.bsr = f.readlines()
+        return
 
     def getMagneticDiffraction():
         """"""

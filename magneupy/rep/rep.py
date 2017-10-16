@@ -1,4 +1,5 @@
-import numpy, string, inspect, re, fnmatch, pandas
+import numpy
+import string, inspect, re, fnmatch, pandas
 from collections import Iterable, namedtuple, OrderedDict, deque
 
 class Rep(OrderedDict):
@@ -426,7 +427,6 @@ class MagRepGroup(OrderedDict):
         self.mrc = self.magrepcollection
         if sarahfile is not None: 
             self.readSarahSummary(sarahfile)
-            return        
         return
 
     def setReps(self, reps):
@@ -669,6 +669,100 @@ class MagRepGroup(OrderedDict):
             # Make correps
             #self
             pass
+        return
+
+    def bas2rep(self, fp, bsr, lid=None, **kwargs):
+        """"""
+        if lid == 'N-O':
+            for l in bsr:
+                if "=> Dimensions of Ir(reps):" in l:
+                    s = l.strip()
+                    print(s)
+                    break
+            dims = list(map(int, list(s.partition(':')[-1].replace(" ", ""))))
+            print(dims)
+
+            for l in bsr:
+                if "-> GAMMA(Magnetic):" in l:
+                    decomp_string = l.replace(" ","")
+                    print(decomp_string)
+
+            Nirreps = []
+            Oirreps = []
+            ct = 0
+            for dim in dims:
+                ct += 1
+                if "("+str(ct)+")" in decomp_string:
+                    Oirreps.append(dim)
+                    Nirreps.append(ct)
+                    self['G' + str(ct)] = Irrep(qm=self.qm, sg=None, N=ct, Natoms=None, copies=None,
+                                                    order=dim, bvg=None)
+            return Nirreps, Oirreps
+        return
+
+    def readBasIreps(self, magnetic):
+        """
+        Definitely not most efficient, but quick and dirty
+        """
+
+        # Get the descriptive information by reading the beginning lines
+        # Read in the ordering wavevector, qm:
+        self.qm = magnetic.qm
+
+        fp  = magnetic.fp
+        bsr = magnetic.bsr
+
+        # Get a list of Irreps and their orders, while also making those Irreps in the MagRepGroup along the way.
+        Nirreps, Oirreps = self.bas2rep(fp, bsr, lid='N-O')
+        self.Nirreps = Nirreps
+
+        # The total number of Irreps is determined as:
+        self.Nreps = len(self.Nirreps)
+
+        Nunique_a = 0
+        for l in bsr:
+            if "=> No. of sites:" in l:
+                s = l.replace(" ", "")
+                Nunique_a = int((s.partition(':')[-1]).strip("\n"))
+                break
+
+        ds = {}
+        ct = 0
+        for atom in magnetic.magatoms.values():
+            ct += 1
+            ds[str(ct)+"_"+str(Nunique_a)] = atom.d
+        Natoms = ct
+
+        lines = deque(fp)
+        ct = 0
+        nat = 0
+        while len(lines) > 0:
+            l=lines.popleft()
+            if " ----- Block-of-lines for PCR start just below this line\n" in l:
+                Nirrep = Nirreps[ct]
+            if "BASR" in l:
+                nat += 1
+                #print(nat)
+                r = [float(s) for s in re.findall(r'\d+\.*\d*', l)]
+                l = lines.popleft()
+                i = [float(s) for s in re.findall(r'\d+\.*\d*', l)]
+                N = len(r) // 3
+                assert len(i) // 3 == N
+                #print(len(r))
+                for q in range(N):
+                    #print(q)
+                    bv = numpy.array(r[3*q:3*(q+1)]) + 1j * numpy.array(i[3*q:3*(q+1)])
+                    bv = BasisVector(bv, d=ds[str(nat) + '_' + str(Nunique_a)], Nbv=q, Nrep=Nirrep, Natom=nat,
+                                 Nunique_atom=Nunique_a)
+                    try:
+                        self['G' + str(Nirrep)]['psi' + str(q) + '_' + str(Nunique_a)]
+                    except KeyError:
+                        self['G' + str(Nirrep)]['psi' + str(q) + '_' + str(Nunique_a)] = BasisVectorGroup(
+                            basisvectors=[], Nbv=q, Nunique_atom=Nunique_a, names=None, orbit=None)
+                    self.addBasisVector(bv, Nirrep, q, Nunique_a, nat)
+            if " ----- End-of-block of lines for PCR \n" in l:
+                ct += 1
+                nat = 0
         return
 
     def setFamilyName(self, name='magrepgroup'):

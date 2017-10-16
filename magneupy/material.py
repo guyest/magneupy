@@ -477,7 +477,7 @@ class Crystal(object):
     * Allow input of CIF, MCIF (eventually), Sarah (eventually), etc. files in order to generate the whole Crystal from scatch
     """
     def __init__(self, nuclear=None, mag=None, cifname=None, charge=None, magrepgroup=None, nucrepgroup=None,
-                 spacegroup=None, **kwargs):
+                 spacegroup=None, name='', **kwargs):
 
         # Initialize the RepGroups
         self.magrepgroup = magrepgroup
@@ -513,14 +513,17 @@ class Crystal(object):
         self.charge  = charge
         # self.exoticorders
 
+        self.name = name
+
         self.claimChildren()
         return
 
-    def getMagneticMoments(self, Nrep=1, bvs=None, coeffs=None, mu=None):
+    def getMagneticMoments(self, bvs=None, coeffs=None, mu=None):
         """
         TODO:
         * should be called setMagneticMoments?
         """
+        Nrep = int(list(self.magrepgroup.keys())[0][1]) # needs to be more robust.
         self.magrepgroup.IR0 = Nrep
         if coeffs is None: coeffs={}
         for irrep in list(self.magrepgroup.values()):
@@ -535,7 +538,6 @@ class Crystal(object):
         for magatom in list(self.magnetic.magatoms.values()):
             magatom.setMomentSize(mu)
             magatom.addMoment(self.magrepgroup.getMagneticMoment(d=magatom.d, Nrep=Nrep))
-
         return
 
     def setChild(self, child):
@@ -665,6 +667,11 @@ class Crystal(object):
         self.getMagneticMoments(Nrep=Nrep, bvs=bvs, coeffs=coeffs)
         Fm = self.magnetic.getMagneticStructureFactor(Qm=self.Qm, squared=True)
         return Fm
+
+    def gen_magrepgroup(self):
+        """"""
+        self.magnetic.gen_magrepgroup()
+        return
 
     @staticmethod
     def residual(params, self, Nreps=[1]):
