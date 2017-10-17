@@ -153,17 +153,15 @@ class NuclearStructure(object):
     TODO:
     * Decide: Make something like a Structures class that the others are subclassed from?
     """
+    # Set the initial state for various fields
+    familyname = 'nuclear'
+    atoms = []
+    names = []
+
     def __init__(self, cifname=None, structure_info=None, Q=None, Qmax=7, parents=None, plane=None):
         """"""
         # Set up the NuclearStructure family
-        self.familyname = 'nuclear'
         self.setParents(parents)
-
-        # Set the initial state for various fields
-        self.atoms = []
-        self.names = []
-
-        # ...
 
         # make the Q values at which to sample
         plane = 'hhl' if plane is None else plane
@@ -173,12 +171,7 @@ class NuclearStructure(object):
         self.setStructure(cifname=cifname, structure_info=structure_info)
         self.getNuclearStructureFactor()
         self.setNames()
-
-
-
         self.claimChildren()
-
-
         return
 
     def setStructure(self, cifname=None, structure_info=None):
@@ -201,11 +194,23 @@ class NuclearStructure(object):
             # Place the atoms in their locations
             self.placeAtoms(struc)
 
+            # set Spacegroup in H-M string form by default.
+            self.getSpaceGroup(cifblock.data)
+
         elif structure_info is not None:
             assert(isinstance(structure_info, dict))
             self.__dict__.update(structure_info)
 
 
+        return
+
+    def setSpaceGroup(self, cifdict):
+        spacegroup = None
+        try:
+            spacegroup = cifdict['_symmetry_space_group_H-M']
+        except:
+            pass
+        self.spacegroup = spacegroup
         return
 
     def setLattice(self, struc):
@@ -483,9 +488,6 @@ class Crystal(object):
         self.magrepgroup = magrepgroup
         self.nucrepgroup = nucrepgroup
 
-        # Initialize the symmetry
-        self.spacegroup  = spacegroup
-
         # Initialize the data container
         self.data = {}
         self.Qm = None
@@ -509,9 +511,10 @@ class Crystal(object):
                 raise
         else:
             self.nuclear = nuclear
+        self.spacegroup = self.nuclear.spacegroup
+
         self.magnetic= mag
         self.charge  = charge
-        # self.exoticorders
 
         self.name = name
 
