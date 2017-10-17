@@ -195,7 +195,7 @@ class NuclearStructure(object):
             self.placeAtoms(struc)
 
             # set Spacegroup in H-M string form by default.
-            self.getSpaceGroup(cifblock.data)
+            self.setSpaceGroup(cifblock.data)
 
         elif structure_info is not None:
             assert(isinstance(structure_info, dict))
