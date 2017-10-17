@@ -205,12 +205,13 @@ class NuclearStructure(object):
         return
 
     def setSpaceGroup(self, cifdict):
-        spacegroup = None
         try:
-            spacegroup = cifdict['_symmetry_space_group_H-M']
+            self.spacegroup = cifdict['_symmetry_space_group_name_H-M']
+            print('got spacegroup')
         except:
+            self.spacegroup = None
+            print('failed to get spacegroup')
             pass
-        self.spacegroup = spacegroup
         return
 
     def setLattice(self, struc):
