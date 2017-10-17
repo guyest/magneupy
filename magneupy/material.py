@@ -1,3 +1,4 @@
+import typing
 from cmath import polar
 from lmfit import minimize, Parameters
 import numpy as np
@@ -482,7 +483,9 @@ class Crystal(object):
     * Need a specified set<obj> function for each Child object that also associates with the Parent crystal. 
     * Allow input of CIF, MCIF (eventually), Sarah (eventually), etc. files in order to generate the whole Crystal from scatch
     """
-    def __init__(self, nuclear=None, mag=None, cifname=None, charge=None, magrepgroup=None, nucrepgroup=None,
+    _maginit = {}  # type: typing.Mapping[str,list]
+
+    def __init__(self, cif=None, maginfo=None, cifname=None, charge=None, magrepgroup=None, nucrepgroup=None,
                  spacegroup=None, name='', **kwargs):
 
         # Initialize the RepGroups
@@ -500,27 +503,28 @@ class Crystal(object):
         self.familyname = 'crystal'
 
         # Initialize the Structures
-        if type(nuclear) is str:
-            try:
-                self.nuclear = NuclearStructure(cifname=nuclear, parents=self, **kwargs)
-            except:
-                raise
-        elif type(cifname) is str:
-            try:
-                self.nuclear = NuclearStructure(cifname=cifname, parents=self, **kwargs)
-            except:
-                raise
-        else:
-            self.nuclear = nuclear
+        try:
+            self.nuclear = NuclearStructure(cifname=cif, parents=self, **kwargs)
+        except: # make file-not-found-error handling
+            self.nuclear = kwargs['nuclear'] if kwargs['nuclear'] else None
         self.spacegroup = self.nuclear.spacegroup
 
-        self.magnetic= mag
-        self.charge  = charge
+        self._maginit = maginfo
+        try:
+            from . import magnetic
+            self.magnetic = magnetic.MagneticStructure.from_parent(self)
+        except: # make file-not-found-error handling
+            raise
+            self.magnetic = kwargs['magnetic'] if kwargs['magnetic'] else None
 
         self.name = name
 
         self.claimChildren()
         return
+
+    @property
+    def magninit(self):
+        return self._maginit
 
     def getMagneticMoments(self, bvs=None, coeffs=None, mu=None):
         """

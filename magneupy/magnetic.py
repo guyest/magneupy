@@ -1,3 +1,4 @@
+import typing
 import numpy as np
 import periodictable as pt
 from lmfit import Minimizer
@@ -200,8 +201,11 @@ class MagAtomGroup(AtomGroup):
 
 class MagneticStructure(NuclearStructure):
     """"""
+    familyname = 'magnetic'
+    fitter = None
+    res = None
     def __init__(self, magnames=None, magatoms=None, nuclear=None, qms=None,
-                 Q=None, Qmax=7, Fexp=None, parents=None, plane=None):
+                 Q=None, Qmax=7, Fexp=None, parents=None, plane=None, **kwargs):
         """
         TODO:
         * Needs the BasisVectorGroups added to each magatom still.
@@ -209,26 +213,16 @@ class MagneticStructure(NuclearStructure):
         """
         # Set up the MagneticStructure family
         self.setqms(qms)
-        self.familyname = 'magnetic'
         self.setParents(parents) #<< Needs work? See Crystal.
-        try:
-            self.magrepgroup = self.crystal.magrepgroup
-        except:
-            pass
 
         assert(isinstance(nuclear, NuclearStructure))
         self.nuclear = nuclear
 
         self.magnames = magnames
         self.magname  = self.magnames[0]
-        kwargs = {}
         if plane is not None: kwargs['plane'] = plane
         self.Q = self.makeQ(Qmax=Qmax, **kwargs) if Q is None else Q
         self.Fexp = None if Fexp is None else Fexp
-
-        # Preallocate fitting fields.
-        self.fitter = None
-        self.res = None
 
         if magatoms is None: self.magatoms = MagAtomGroup()
         elif not isinstance(magatoms, (MagAtomGroup)):
@@ -241,6 +235,10 @@ class MagneticStructure(NuclearStructure):
         self.gen_smb()
 
         return
+
+    @classmethod
+    def from_parent(cls, crystal: Crystal):
+        return cls(parents=[crystal], **crystal.maginit())
 
     def setqms(self, qms):
         """"""
