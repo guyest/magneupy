@@ -1,4 +1,5 @@
 import typing
+import string
 import numpy as np
 import periodictable as pt
 from lmfit import Minimizer
@@ -9,6 +10,7 @@ tempfile.tempdir = '/var/tmp'
 
 from .material import Atom, AtomGroup, NuclearStructure, Crystal
 from .rep.rep import BasisVectorCollection, MagRepGroup
+from .data.data import MagneticStructureFactorModel
 
 class MagAtom(Atom):
     """
@@ -80,12 +82,19 @@ class MagAtom(Atom):
         pstr = string.ascii_letters
         elnolet = elall.translate(elall, pstr.encode('utf-8'))
         elname = elname.translate(elall, elnolet)
-        charge = int(self.oxidation)
+        charge = self.oxidation
+        # assert here
+        if charge is None:
+            pass
+        else:
+            charge = int(charge)
+
         charge = 3 if elname.decode() == 'Ce' else charge
         charge_key = 2 if elname.decode() == 'Ce' else charge
+        charge = 3 if elname.decode() == 'Mn' else charge
 
         # Get the element from the periodic table
-        element = pt.elements.isotope(elname)
+        element = pt.elements.isotope(elname.decode())
 
         gL = 1./2. + (L*(L+1)-S*(S+1))/(2*J*(J+1))
         gS = 1. + (S*(S+1)-L*(L+1))/(J*(J+1))
@@ -204,6 +213,8 @@ class MagneticStructure(NuclearStructure):
     familyname = 'magnetic'
     fitter = None
     res = None
+    qms = []
+    qm = None
     def __init__(self, magnames=None, magatoms=None, nuclear=None, qms=None,
                  Q=None, Qmax=7, Fexp=None, parents=None, plane=None, **kwargs):
         """
@@ -214,12 +225,16 @@ class MagneticStructure(NuclearStructure):
         # Set up the MagneticStructure family
         self.setqms(qms)
         self.setParents(parents) #<< Needs work? See Crystal.
+        if nuclear is None:
+            crystal = parents[0]
+            nuclear = crystal.nuclear
 
         assert(isinstance(nuclear, NuclearStructure))
         self.nuclear = nuclear
 
         self.magnames = magnames
         self.magname  = self.magnames[0]
+        if kwargs is None: kwargs = dict()
         if plane is not None: kwargs['plane'] = plane
         self.Q = self.makeQ(Qmax=Qmax, **kwargs) if Q is None else Q
         self.Fexp = None if Fexp is None else Fexp
@@ -231,19 +246,26 @@ class MagneticStructure(NuclearStructure):
 
         if self.nuclear is not None:
             self.setMagneticStructure()
-
-        self.gen_smb()
-
         return
+
+
+    def prepareMagneticStructure(self):
+        self.gen_smb()
+        self.gen_basireps()
+        self.mrg = self.crystal.magrepgroup
+        self.mrg.readBasIreps(self)
+        self.crystal.getMagneticMoments()
+        return
+
 
     @classmethod
     def from_parent(cls, crystal: Crystal):
-        return cls(parents=[crystal], **crystal.maginit())
+        return cls(parents=[crystal], **crystal.maginit)
 
     def setqms(self, qms):
         """"""
-        self.qms = iter(qms)
-        self.qm = self.qms.__next__()
+        self.qms = list(qms)
+        self.qm = self.qms[0]
         return
 
     def setMagneticStructure(self):
@@ -287,7 +309,7 @@ class MagneticStructure(NuclearStructure):
             coords = np.asanyarray(Q)
 
         # Construct the MagneticStructureFactorModel with
-        self.Fm = pyData.MagneticStructureFactorModel(coords, np.zeros(coords.shape, dtype=np.complex128), units=units)
+        self.Fm = MagneticStructureFactorModel(coords, np.zeros(coords.shape, dtype=np.complex128), units=units)
 
         return
 
@@ -500,8 +522,8 @@ class MagneticStructure(NuclearStructure):
         """
         This method sets the parent reference of NuclearStructures to a Cystal and returns a TypeError if the parent is of the wrong type
         """
-        errmsg = 'MagneticStructures expect a Crystal or MagRepGroup type as their parent. Please provide a Crystal type object to reference'
-        types  = (Crystal, MagRepGroup)
+        errmsg = 'MagneticStructures expect a Crystal type as their parent. Please provide a Crystal type object to reference'
+        types  = (Crystal,)
 
         if hasattr(parents, '__iter__'):
             for parent in parents:

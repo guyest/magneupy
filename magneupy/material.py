@@ -9,7 +9,7 @@ from pymatgen.io.cif import CifFile, CifParser
 import string
 
 from .util.functions import getFamilyAttributes
-from .rep.rep import BasisVectorCollection, NucRepGroup
+from .rep.rep import BasisVectorCollection, NucRepGroup, MagRepGroup
 from .data.data import NuclearStructureFactorModel
 
 rec2pol = np.vectorize(polar)
@@ -208,10 +208,10 @@ class NuclearStructure(object):
     def setSpaceGroup(self, cifdict):
         try:
             self.spacegroup = cifdict['_symmetry_space_group_name_H-M']
-            print('got spacegroup')
+            print('Extracted nuclear spacegroup from provided CIF file...')
         except:
             self.spacegroup = None
-            print('failed to get spacegroup')
+            print('Failed to extract nuclear spacegroup from provided CIF file... Did you forget to include it? ')
             pass
         return
 
@@ -501,6 +501,7 @@ class Crystal(object):
 
         # Set up the Crystal family
         self.familyname = 'crystal'
+        self.name = name
 
         # Initialize the Structures
         try:
@@ -509,21 +510,25 @@ class Crystal(object):
             self.nuclear = kwargs['nuclear'] if kwargs['nuclear'] else None
         self.spacegroup = self.nuclear.spacegroup
 
-        self._maginit = maginfo
-        try:
+        if maginfo:
             from . import magnetic
-            self.magnetic = magnetic.MagneticStructure.from_parent(self)
-        except: # make file-not-found-error handling
-            raise
-            self.magnetic = kwargs['magnetic'] if kwargs['magnetic'] else None
-
-        self.name = name
+            self._maginit = maginfo
+            self.magrepgroup = MagRepGroup()
+            try:
+                self.magnetic = magnetic.MagneticStructure.from_parent(self)
+                self.magnetic.prepareMagneticStructure()
+            except:
+                raise
+        elif kwargs['magnetic']:
+            self.magnetic = kwargs['magnetic']
+        else:
+            self.magnetic = None
 
         self.claimChildren()
         return
 
     @property
-    def magninit(self):
+    def maginit(self):
         return self._maginit
 
     def getMagneticMoments(self, bvs=None, coeffs=None, mu=None):
@@ -546,6 +551,7 @@ class Crystal(object):
         for magatom in list(self.magnetic.magatoms.values()):
             magatom.setMomentSize(mu)
             magatom.addMoment(self.magrepgroup.getMagneticMoment(d=magatom.d, Nrep=Nrep))
+        self.magnetic.getMagneticStructureFactor()
         return
 
     def setChild(self, child):
@@ -553,7 +559,7 @@ class Crystal(object):
         setattr(self, child.familyname, child)
         return
 
-    def claimChildren(self, family=['nuclear', 'magnetic', 'charge']):
+    def claimChildren(self, family=['nuclear', 'magnetic']):
         """
         This is performed in the init stage so that all consitituents of the Crystal may back-refernece it by name
         """
