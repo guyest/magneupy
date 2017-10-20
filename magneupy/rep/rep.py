@@ -52,6 +52,7 @@ class BasisVectorGroup(OrderedDict):
     """
     BasisVectorGroups are composed of all BasisVectors for equivalent atoms produced by a single Rep. 
     For the full set of BasisVectors for a single atom including contributions from all Reps (and qm), use a BasisVectorCollection.
+    Test
     """    
     def __init__(self, basisvectors=[], Nbv=1, Nunique_atom=1, names=None, orbit=None):
         """
