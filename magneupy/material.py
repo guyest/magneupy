@@ -338,13 +338,13 @@ class NuclearStructure(object):
                 if sym:
                     Qiter = product(qs, repeat=2)
                 else:
-                    Qiter = combinations_with_replacement(Q, 2)
+                    Qiter = combinations_with_replacement(qs, 2)
             else:
                 qs = -1.*np.hstack((np.arange(Qmax)+1., -np.arange(Qmax+1.)))
                 if sym:
                     Qiter = product(qs, repeat=2)
                 else:
-                    Qiter = combinations_with_replacement(Q, 2)
+                    Qiter = combinations_with_replacement(qs, 2)
 
             Q = []
             for q in Qiter:
@@ -433,7 +433,7 @@ class NuclearStructure(object):
 
             else:
                 #print("Structure factor for "+str(Q)+" is:"+str(Fn))
-                return sqrt(scale_factor)*Fn
+                return np.sqrt(scale_factor)*Fn
 
     def claimChildren(self, family=['atoms']):
         """
@@ -610,6 +610,19 @@ class Crystal(object):
             self.magnetic.Fm.values = Fm
             self.Fm = self.magnetic.Fm
             self.magnetic.magrepgroup
+        return
+
+    def loadStructureFactor(self, filename: str, typstr=None):
+        H,K,L,F,Ferr = np.loadtxt(filename, unpack=True)
+        Q = np.hstack((H,K,L,))
+        if typstr is None:
+            print("Please input the type string for the structure factor: 'nuc' or 'mag'.")
+        elif typstr is ('nuc' or 'nuclear'):
+            self.setStructureFactor(Qn=Q, Fn_exp=F, Fn_err=Ferr)
+        elif typstr is ('mag' or 'magnetic'):
+            self.setStructureFactor(Qm=Q, Fm_exp=F, Fm_err=Ferr)
+        else:
+            print("No valid input type string. Sorry!")
         return
 
     def rietveld_refinement(self, Nreps_fit=[], Qs_fit=None):
