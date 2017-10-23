@@ -257,7 +257,6 @@ class MagneticStructure(NuclearStructure):
         self.crystal.getMagneticMoments()
         return
 
-
     @classmethod
     def from_parent(cls, crystal: Crystal):
         return cls(parents=[crystal], **crystal.maginit)
@@ -504,11 +503,6 @@ class MagneticStructure(NuclearStructure):
             with open(tmpdir + '/bas.bsr', 'r+') as f:
                 f.seek(0)
                 self.bsr = f.readlines()
-        return
-
-    def getMagneticDiffraction():
-        """"""
-
         return
 
     def claimChildren(self, family=['magatoms']):

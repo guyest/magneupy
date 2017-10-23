@@ -10,7 +10,7 @@ import string
 
 from .util.functions import getFamilyAttributes
 from .rep.rep import BasisVectorCollection, NucRepGroup, MagRepGroup
-from .data.data import NuclearStructureFactorModel
+from .data.data import StructureFactorModel, NuclearStructureFactorModel
 
 rec2pol = np.vectorize(polar)
 
@@ -151,8 +151,6 @@ class AtomGroup(OrderedDict):
 
 class NuclearStructure(object):
     """
-    TODO:
-    * Decide: Make something like a Structures class that the others are subclassed from?
     """
     # Set the initial state for various fields
     familyname = 'nuclear'
@@ -590,7 +588,7 @@ class Crystal(object):
 
         if ((not(Qn is None)) and (not(Fn_exp is None))):
             self.Qn     = Qn
-            self.Fn_exp = pyData.StructureFactorModel(Qn, Fn_exp, units=None)
+            self.Fn_exp = StructureFactorModel(Qn, Fn_exp, Fn_err, units=None)
             self.Fn_err = Fn_err
             self.Fn = self.nuclear.Fn
 
@@ -603,8 +601,8 @@ class Crystal(object):
             if self.Fm_exp is Fm_exp:
                 pass
             else:
-                self.magnetic.Fexp = pyData.StructureFactorModel(Qm,
-                                                                 Fm_exp, Fm_err, units=None)
+                self.magnetic.Fexp = StructureFactorModel(Qm, Fm_exp, Fm_err, units=None)
+                self.Fm_err = Fm_err
                 self.Fm_exp = self.magnetic.Fexp
             #
             Fm = np.asanyarray(self.calc_Fm(**kwargs))
