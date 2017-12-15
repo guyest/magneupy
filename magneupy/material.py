@@ -352,6 +352,26 @@ class NuclearStructure(object):
             Q = np.asanyarray(Q)
             Q = np.vstack((Q[:,0],Q[:,0],Q[:,1])).transpose()
 
+        if plane == 'h0l':
+            if firstQuad:
+                qs = np.arange(Qmax+1.)
+                if sym:
+                    Qiter = product(qs, repeat=2)
+                else:
+                    Qiter = combinations_with_replacement(qs, 2)
+            else:
+                qs = -1.*np.hstack((np.arange(Qmax)+1., -np.arange(Qmax+1.)))
+                if sym:
+                    Qiter = product(qs, repeat=2)
+                else:
+                    Qiter = combinations_with_replacement(qs, 2)
+
+            Q = []
+            for q in Qiter:
+                Q.append(np.asanyarray(q))
+            Q = np.asanyarray(Q)
+            Q = np.vstack((Q[:,0],0*Q[:,0],Q[:,1])).transpose()
+
         if plane == 'hk0':
             if firstQuad:
                 qs = np.arange(Qmax+1.)
