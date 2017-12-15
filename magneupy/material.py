@@ -517,7 +517,7 @@ class Crystal(object):
                 self.magnetic.prepareMagneticStructure()
             except:
                 raise
-        elif kwargs['magnetic']:
+        elif 'magnetic' in kwargs.keys():
             self.magnetic = kwargs['magnetic']
         else:
             self.magnetic = None
