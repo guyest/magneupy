@@ -370,7 +370,7 @@ class NuclearStructure(object):
             for q in Qiter:
                 Q.append(np.asanyarray(q))
             Q = np.asanyarray(Q)
-            Q = np.vstack((Q[:,0],0*Q[:,0],Q[:,1])).transpose()
+            Q = np.vstack((Q[:,0],0.*Q[:,0],Q[:,1])).transpose()
 
         if plane == 'hk0':
             if firstQuad:
@@ -525,7 +525,7 @@ class Crystal(object):
         try:
             self.nuclear = NuclearStructure(cifname=cif, parents=self, **kwargs)
         except: # make file-not-found-error handling
-            self.nuclear = kwargs['nuclear'] if kwargs['nuclear'] else None
+            self.nuclear = kwargs['nuclear'] if ('nuclear' in kwargs.keys()) else None
         self.spacegroup = self.nuclear.spacegroup
 
         if maginfo:
