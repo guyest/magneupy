@@ -4,8 +4,15 @@ import numpy as np
 import periodictable as pt
 from lmfit import Minimizer
 import tempfile
+import platform
 import sh
-basireps = sh.Command('./basireps_mac')
+if platform.system() in ['Linux', 'linux', 'linux2', 'linux4']:
+    basireps = sh.Command('./basireps_linux')
+elif platform.system() in ['macOS', 'Mac', 'darwin', 'Darwin']:
+    basireps = sh.Command('./basireps_mac')
+elif platform.system() in ['Windows']:
+    basireps = sh.Command('./basireps_win')
+
 tempfile.tempdir = '/var/tmp'
 
 from .material import Atom, AtomGroup, NuclearStructure, Crystal
