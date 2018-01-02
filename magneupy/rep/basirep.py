@@ -1,7 +1,10 @@
-import tempfile
-from sh import basireps_mac as basireps
-
-
+import tempfile, platform
+if platform.system() in ['Linux', 'linux', 'linux2', 'linux4']:
+    from sh import basireps_linux as basireps
+elif platform.system() in ['macOS', 'Mac', 'darwin', 'Darwin']:
+    from sh import basireps_mac as basireps
+elif platform.system() in ['Windows']:
+    from sh import basireps_win as basireps
 
 def write_smb(crystal, file=None):
     smb = []
@@ -23,7 +26,7 @@ with tempfile.TemporaryDirectory():
     with open('bas.smb', 'w') as f:
         f.writelines(smb)
     basireps('bas.smb')
-    with open('Mn3Ge.fp', 'r+') as f:
+    with open('bas.fp', 'r+') as f:
         f.seek(0)
         fp = f.readlines()
 
