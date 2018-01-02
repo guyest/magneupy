@@ -94,11 +94,12 @@ class MagAtom(Atom):
         if charge is None:
             pass
         else:
-            charge = int(charge)
-
-        charge = 3 if elname.decode() == 'Ce' else charge
+            try:
+                charge = int(charge)
+            except ValueError:
+                charge = 3 if elname.decode() == 'Ce' else charge
+                charge = 3 if elname.decode() == 'Mn' else charge
         charge_key = 2 if elname.decode() == 'Ce' else charge
-        charge = 3 if elname.decode() == 'Mn' else charge
 
         # Get the element from the periodic table
         element = pt.elements.isotope(elname.decode())
