@@ -17,7 +17,7 @@ class BasisVector(numpy.ndarray):
     TODO:
     <done> Extends ndarray (see: http://docs.scipy.org/doc/numpy/user/basics.subclassing.html) 
     """
-    def __new__(bv, input_array, d=None, Nbv=None, Nrep=None, Natom=None, Nunique_atom=None, norm=True):
+    def __new__(bv, input_array, d=None, Nbv=None, Nrep=None, Natom=None, Nunique_atom=None, norm=False):
         # Input array is an already formed ndarray instance, but we want to normalize it
         if norm:
             norm_fac = numpy.linalg.norm(input_array)
@@ -354,7 +354,7 @@ class RepGroup(OrderedDict):
         errmsg = kwargs['errmsg'] if 'errmsg' in kwargs else errmsg
         
         types  = (RepCollection, Crystal)
-        types  = kmwargs['types'] if 'types'  in kwargs else types
+        types  = kwargs['types'] if 'types'  in kwargs else types
         
         if hasattr(parents, '__iter__'):
             for parent in parents: 
@@ -744,9 +744,9 @@ class MagRepGroup(OrderedDict):
             if "BASR" in l:
                 nat += 1
                 #print(nat)
-                r = [float(s) for s in re.findall(r'\d+\.*\d*', l)]
+                r = [float(s) for s in re.findall(r'-?\d+\.*\d*', l)]
                 l = lines.popleft()
-                i = [float(s) for s in re.findall(r'\d+\.*\d*', l)]
+                i = [float(s) for s in re.findall(r'-?\d+\.*\d*', l)]
                 N = len(r) // 3
                 assert len(i) // 3 == N
                 #print(len(r))

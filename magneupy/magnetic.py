@@ -128,13 +128,31 @@ class MagAtom(Atom):
         """
         return
 
+    @property
+    def cartesian_moment(self, unit=False):
+        T = np.asanyarray(self.nuclear.basis).T / self.nuclear.abc
+        m = self.moment.squeeze()
+        m = np.dot(T,np.absolute(m)*np.absolute(np.sign(m)))
+        m/= np.linalg.norm(m)
+        if unit:
+            return m
+        else:
+            return m * self.mu
+
     def addMoment(self, m, phi=0, normalize=True):
         """"""
         if self.phi is not None: phi=self.phi
         m = np.asanyarray(m)*np.exp(1j*phi)
         if normalize:
             try:
-                m/= np.linalg.norm(m)
+                T = np.asanyarray(self.nuclear.basis).T/self.nuclear.abc
+                T_inv = np.linalg.inv(T)
+
+                m_cart = np.dot(T, m)
+                m_cart/= np.linalg.norm(m_cart)
+                m_unit = np.dot(T_inv, m_cart)
+                
+                m = 1. * m_unit
             except ValueError:
                 pass
         self.moment = self.mu*m.reshape((1,3))
