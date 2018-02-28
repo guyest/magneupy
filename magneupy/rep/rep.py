@@ -54,17 +54,24 @@ class BasisVectorGroup(OrderedDict):
     For the full set of BasisVectors for a single atom including contributions from all Reps (and qm), use a BasisVectorCollection.
     Test
     """    
-    def __init__(self, basisvectors=[], Nbv=1, Nunique_atom=1, names=None, orbit=None):
+
+    key = None
+
+    def __init__(self, basisvectors=[], Nbv=1, Nunique_atom=1, names=None, orbit=None, Nirrep=0):
         """
         Nbv should be given by the Order of the Irrep times the number of Copies.
         I decided not to have the option to input a BasisVectorGroup directly. It is simple to make a list of BasisVectors.
         TODO:
         """       
         OrderedDict.__init__(self)
+        self.Nirrep = Nirrep
+        #assert isinstance(IR, Irrep)
+        #self.IR = IR
         #super(BasisVectorGroup, self).__init__()
         # Set the coefficient to a default value:
-        self.setCoeff()
         self.name = 'psi'+str(Nbv)+'_'+str(Nunique_atom)
+        self.setBasisVectors(basisvectors)
+        self.set_key()
         
         return    
 
@@ -77,7 +84,8 @@ class BasisVectorGroup(OrderedDict):
         return
 
     def setCoeff(self, coeff=1.+1j*0.):
-        """"""
+        """
+        """
         self.coeff = coeff
         return
 
@@ -91,12 +99,20 @@ class BasisVectorGroup(OrderedDict):
         return
 
     def getMagneticMoment(self, d):
-        """"""
+        """
+        DEPRECATED
+        """
         m = numpy.asanyarray([0.,0.,0.], dtype=numpy.complex_)
         for bv in list(self.values()):
             if numpy.isclose(d,bv.d).all():
-                m += bv * self.coeff        
+                m += bv
         return m
+
+    def set_key(self):
+        G = 'G'+str(self.Nirrep)
+        bvg = self.name
+        self.key = G+'_'+bvg
+
 
     def checkBasisVectors(self):
         # Perform some checks to make sure the objects are what we think they are
@@ -113,66 +129,69 @@ class BasisVectorGroup(OrderedDict):
         return
 
 
-class BasisVectorCollection(Rep):
+class BasisVectorCollection(OrderedDict):
     """
     A BasisVectorCollection is a collection of BasisVectorGroups from different Reps but corresponding to the same atom. 
     It is broken up into named fields corresponding to each of the ordering wavevectors.
     """
-    def __init__(self, basisvectorgroups=[BasisVectorGroup()], Nbv=1, names=None):
+
+    meta = {}
+
+    def __init__(self, *args, **kwargs):
         """
         TODO:
-        * Have named fields corresponding to each of the dynamically determined ordering wavevectors (namedtuple)
         """
-        __slots__ = ()
-        
-        _fields = ('qm1', 'qm2')
-    
-        def __new__(_cls, qm1, qm2):
-            'Create new instance of BasisVectorCollection(qm1, qm2)'
-            return _tuple.__new__(_cls, (qm1, qm2))
-    
-        @classmethod
-        def _make(cls, iterable, new=tuple.__new__, len=len):
-            'Make a new BasisVectorCollection object from a sequence or iterable'
-            result = new(cls, iterable)
-            if len(result) != 2:
-                raise TypeError('Expected 2 arguments, got %d' % len(result))
-            return result
-    
-        def __repr__(self):
-            'Return a nicely formatted representation string'
-            return 'BasisVectorCollection(qm1=%r, qm2=%r)' % self
-    
-        def _asdict(self):
-            'Return a new OrderedDict which maps field names to their values'
-            return OrderedDict(list(zip(self._fields, self)))
-    
-        def _replace(_self, **kwds):
-            'Return a new BasisVectorCollection object replacing specified fields with new values'
-            result = _self._make(list(map(kwds.pop, ('qm1', 'qm2'), _self)))
-            if kwds:
-                raise ValueError('Got unexpected field names: %r' % list(kwds.keys()))
-            return result
-    
-        def __getnewargs__(self):
-            'Return self as a plain tuple.  Used by copy and pickle.'
-            return tuple(self)
-    
-        __dict__ = _property(_asdict)
-    
-        def __getstate__(self):
-            'Exclude the OrderedDict from pickling'
-            pass
-    
-        qm1 = _property(_itemgetter(0), doc='Alias for field number 0')
-    
-        qm2 = _property(_itemgetter(1), doc='Alias for field number 1')        
-        return    
+        bvgs = []
+        for arg in args:
+            assert(isinstance(arg, BasisVectorGroup))
+            bvgs.append((arg.key, arg))
 
-    def append(self):
-        """"""
-        self.bvs
-        return
+        OrderedDict.__init__(self, bvgs)
+        self._overrides(**kwargs)
+        self.order = len(self)
+        self._setCoeffs()
+        self._setLinCombs()
+        self._setMeta()
+
+    def _overrides(self, **kwargs):
+        for kw,val in kwargs.items():
+            try:
+                setattr(self, kw, val)
+            except AttributeError:
+                raise
+
+    def _setMeta(self):
+        d = []
+        for bvtup in self.bvs:
+            d.append(bvtup[0].d)
+        self.meta['d'] = tuple(d)
+
+    def _setCoeffs(self, coeffs=None):
+        if coeffs:
+            assert(len(coeffs) == self.order)
+            self.coeffs = numpy.asarray(coeffs, dtype=numpy.complex_).squeeze()
+        else:
+            coeffs = tuple(self.order*[1+0j])
+            self.coeffs = numpy.asarray(coeffs, dtype=numpy.complex_).squeeze()
+
+    def _setLinCombs(self, **kwargs):
+        bvs = tuple(zip(*map(OrderedDict.values, self.values())))
+        for bv in bvs:
+            assert(len(bv) == self.order)
+        self.bvs = bvs
+
+        _tmp_bv = numpy.asarray(self.bvs)
+        _tmp_bv = numpy.einsum('j, ijk -> ijk', self.coeffs, _tmp_bv)
+        self.lincombs = numpy.sum(_tmp_bv, axis=1)
+
+    def update(self, *coeffs):
+        self._setCoeffs(coeffs=coeffs)
+        self._setLinCombs()
+
+    def getMagneticMoment(self, d):
+        m = numpy.asanyarray([0.,0.,0.], dtype=numpy.complex_)
+        lidx = numpy.isclose(d, numpy.asarray(self.meta['d'])).all(axis=1)
+        return self.lincombs[lidx,...]
 
 
 class Irrep(OrderedDict):
@@ -410,7 +429,7 @@ class MagRepGroup(OrderedDict):
     ** Even more ideally, porting the functionality of Sarah and/or Bilbao to Python would be FANTASTIC. (See pycrystfml: in-progress...)
     
     """
-    def __init__(self, reps=None, crystal=None, repcollection=None, sarahfile=None, basisvectorgroup=None, **kwargs):
+    def __init__(self, reps=None, crystal=None, repcollection=None, sarahfile=None, basisvectorgroup=None, bvgs=[], **kwargs):
         """
         Need to fix class relations...
         """
@@ -418,8 +437,13 @@ class MagRepGroup(OrderedDict):
         OrderedDict.__init__(self)
         
         self.IR0 = None
+        self.bv0 = 0
+        self.bvgs = bvgs
         self.basisvectorgroup = basisvectorgroup
         self.bvg = self.basisvectorgroup # alias
+        self.bvcs = []
+        self.bvc  = None
+        #self._populateCollections()
         self.setRepCollection(repcollection, rcname='magrepcollection')
             
         # Ready the input
@@ -457,16 +481,32 @@ class MagRepGroup(OrderedDict):
             setattr(self, rcname, repcollection)
         return
 
-    def addBasisVector(self, bv, Nirrep=None, Nbv=None, Nunique_atom=None, Natom=None):
+    def _populateCollections(self):
+        raise NotImplementedError
+
+    def addBasisVector(self, bv, Nrep=None, Nbv=0, Nunique_atom=None, Natom=None, Nirrep=None):
         """
         TODO:
         * Needs to be finished passing on and correlating the information...
         """
         #if 'G'+str(Nirrep) in self.keys():
-            
-        self['G'+str(Nirrep)]['psi'+str(Nbv)+'_'+str(Nunique_atom)].addBasisVector(bv)
+        if Nrep:
+            pass
+        if Nirrep:
+            Nrep = Nirrep
+            print('use `Nrep=value` instead of `Nirrep`. the later is depricated.')
+
+        self['G'+str(Nrep)]['psi'+str(Nbv)+'_'+str(Nunique_atom)].addBasisVector(bv)
         
         return
+
+    def getBasisVector(self, Nrep=None, Nbv=None, Nunique=1, Nat=1):
+        if Nrep is None:
+            Nrep = self.IR0
+        if Nbv is None:
+            Nbv = self.bv0
+        bv = self['G'+str(Nrep)]['psi'+str(Nbv)+'_'+str(Nunique)]['atom'+str(Nat)+'_'+str(Nunique)]
+        return bv
 
     def sarah2pyRep(self, lines, lid=None, **kwargs):
         """"""
@@ -770,12 +810,15 @@ class MagRepGroup(OrderedDict):
         self.familyname = 'magrepgroup' 
         return
 
-    def getMagneticMoment(self, d, Nrep=None):
+    def getMagneticMoment(self, d, Nrep=None, Nbv=None, Nunique=1):
         """"""
-        if Nrep is None: Nrep = self.IR0
-        m = numpy.asanyarray([0., 0., 0.], dtype=numpy.complex_)
-        for bvg in list(self['G'+str(Nrep)].values()):
-            m += bvg.getMagneticMoment(d)
+        if self.bvc:
+            m = self.bvc.getMagneticMoment(d)
+        else:
+            if Nrep is None: Nrep = self.IR0
+            if Nbv is None: Nbv = self.bv0
+            bvg = list(self['G'+str(Nrep)].values())[Nbv]
+            m = bvg.getMagneticMoment(d)
         return m
 
     def setBasisVectorCollection(self, basisvectorcollection=None):

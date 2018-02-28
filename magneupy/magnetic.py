@@ -128,34 +128,45 @@ class MagAtom(Atom):
         """
         return
 
-    @property
-    def cartesian_moment(self, unit=False):
+    def cartesian_moment(self, m=None, unit=False):
         T = np.asanyarray(self.nuclear.basis).T / self.nuclear.abc
-        m = self.moment.squeeze()
-        m = np.dot(T,np.absolute(m)*np.absolute(np.sign(m)))
+        if m is None:
+            m = self.moment
+        m = m.squeeze()
+        m = np.dot(T,m)  # had been np.dot(T, np.absolute(m)*np.absolute(np.sign(m)))
         m/= np.linalg.norm(m)
         if unit:
             return m
         else:
             return m * self.mu
 
-    def addMoment(self, m, phi=0, normalize=True):
+    def addMoment(self, m, normalize=True, mu=None):
         """"""
-        if self.phi is not None: phi=self.phi
-        m = np.asanyarray(m)*np.exp(1j*phi)
+        #if self.phi is not None: phi=self.phi
+        #print(m)
+        #m = np.asanyarray(m)*np.exp(1j*phi)
         if normalize:
             try:
-                T = np.asanyarray(self.nuclear.basis).T/self.nuclear.abc
-                T_inv = np.linalg.inv(T)
+                T = np.asanyarray(self.nuclear.basis).T / self.nuclear.abc
+                #m_cart = np.dot(T, m)
+                #print(m)
+                #m_cart/= np.linalg.norm(m_cart)
+                m_cart = self.cartesian_moment(m=m, unit=True)
 
-                m_cart = np.dot(T, m)
-                m_cart/= np.linalg.norm(m_cart)
+                T_inv = np.linalg.inv(T)
                 m_unit = np.dot(T_inv, m_cart)
                 
-                m = 1. * m_unit
+                m = self.mu * m_unit
             except ValueError:
+                raise
+        else:
+            if mu:
+                self.mu = mu
+                m = mu * self.cartesian_moment(m=m, unit=True)
+            else:
                 pass
-        self.moment = self.mu*m.reshape((1,3))
+
+        self.moment = m.reshape((1,3))
         return
 
     def getMoment(self, N=None):
@@ -167,8 +178,7 @@ class MagAtom(Atom):
             return self.moment
 
     def setMomentFromIR(self, m, phi=0):
-
-        return
+        raise NotImplementedError
 
     def setMomentSize(self, mu=None):
         if mu is None:
@@ -192,7 +202,7 @@ class MagAtom(Atom):
         TODO:
         * Confirm defintion of moment size in terms of self.moment, then normalize by proper factor to put something like np.norm(self.moment) in Bohr magneton.
         """
-        return np.linalg.norm(self.moment)
+        return self.mu
 
     def setParent(self, parent):
         """"""
@@ -275,17 +285,19 @@ class MagneticStructure(NuclearStructure):
         return
 
 
-    def prepareMagneticStructure(self):
+    def prepareMagneticStructure(self, **kwargs):
         self.gen_smb()
         self.gen_basireps()
         self.mrg = self.crystal.magrepgroup
         self.mrg.readBasIreps(self)
-        self.crystal.getMagneticMoments()
+        Nrep = int(list(self.mrg.keys())[0][1]) # needs to be more robust.
+        self.mrg.IR0 = Nrep
+        self.crystal.getMagneticMoments(**kwargs)
         return
 
     @classmethod
     def from_parent(cls, crystal: Crystal):
-        return cls(parents=[crystal], **crystal.maginit)
+        return cls(parents=[crystal], plane='h0l', **crystal.maginit)
 
     def setqms(self, qms):
         """"""
@@ -323,15 +335,19 @@ class MagneticStructure(NuclearStructure):
         """
 
         if Q is None:
-            # make the coordinates
-            coords = []
-            for qm in self.qms:
-                coords.append(self.Q+qm)
-            coords = np.vstack(coords).reshape(len(self.qms)*len(self.Q),3)
-            sidx = np.argsort(np.linalg.norm(self.rlu2ang(coords), axis=1))
-            coords = coords[sidx,:]
+            try:
+                coords = self.nuclear.Fn.coords
+            except:
+                # make the coordinates
+                coords = []
+                for qm in self.qms:
+                    coords.append(self.Q+qm)
+                coords = np.vstack(coords).reshape(len(self.qms)*len(self.Q),3)
+                sidx = np.argsort(np.linalg.norm(self.rlu2ang(coords), axis=1))
+                coords = coords[sidx,:]
         else:
             coords = np.asanyarray(Q)
+            print('Using input Q array for magnetic structure factor model.')
 
         # Construct the MagneticStructureFactorModel with
         self.Fm = MagneticStructureFactorModel(coords, np.zeros(coords.shape, dtype=np.complex128), units=units)
@@ -423,7 +439,7 @@ class MagneticStructure(NuclearStructure):
             Qnorm = Qnorm.reshape((Q.shape))
             Qh = Q / Qnorm
 
-            # Caclulate the projection of the magnetic structure factor onto the
+            # Calculate the projection of the magnetic structure factor onto the
             # perpendicular plane
             Fm =   np.cross(Qh, np.cross(Fm, Qh))
 

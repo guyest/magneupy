@@ -549,13 +549,16 @@ class Crystal(object):
     def maginit(self):
         return self._maginit
 
-    def getMagneticMoments(self, bvs=None, coeffs=None, mu=None):
+    def getMagneticMoments(self, bvs=None, coeffs=None, mu=None, **kwargs):
         """
         TODO:
         * should be called setMagneticMoments?
         """
-        Nrep = int(list(self.magrepgroup.keys())[0][1]) # needs to be more robust.
-        self.magrepgroup.IR0 = Nrep
+        if self.magrepgroup.bvc:
+            for magatom in list(self.magnetic.magatoms.values()):
+                magatom.setMomentSize(mu)
+                magatom.addMoment()
+        Nrep = self.magrepgroup.IR0
         if coeffs is None: coeffs={}
         for irrep in list(self.magrepgroup.values()):
             # reset the coefficients for each basis vector group
@@ -564,12 +567,12 @@ class Crystal(object):
                 try:
                     bvg.coeff = coeffs[name]
                 except:
-                    print('Using default coefficient of 1 for Basis Vector.')
-                    bvg.coeff = 1
+                    print('Using default coefficient evenly distributed over Basis Vectors.')
+                    bvg.coeff = np.repeat(1.+0j, irrep.order)/irrep.order
         for magatom in list(self.magnetic.magatoms.values()):
             magatom.setMomentSize(mu)
             magatom.addMoment(self.magrepgroup.getMagneticMoment(d=magatom.d, Nrep=Nrep))
-        self.magnetic.getMagneticStructureFactor()
+        self.magnetic.getMagneticStructureFactor(**kwargs)
         return
 
     def setChild(self, child):
