@@ -7,15 +7,15 @@ import numpy as np
 import scipy.signal as sig
 import uncertainties as unc
 from uncertainties import unumpy as unp
-from numpy.matlib import repmat
-from collections import namedtuple, Iterable, OrderedDict
+from collections import namedtuple, OrderedDict
+from collections.abc import Iterable
 from copy import deepcopy, copy
 from lmfit import Model
 import pickle as pkl
 import time
 
 
-class Data(object):
+class Data:
     pass
 
 
@@ -543,7 +543,7 @@ class Coordinates(OrderedDict):
         return
 
 
-class Unit(object):
+class Unit:
     """
     This class provides a way to assign a unit attribute to (mainly) 
     Data.values or Data.coords
@@ -584,7 +584,7 @@ class ExperimentalData(Data):
     """
     def __init__(self, values, verrors, coords, cerrors, units):
         """"""
-        super(ExperimentalData, self).__init__(coords=coords, values=values,
+        super().__init__(coords=coords, values=values,
                                                verrors=verrors,
                                                cerrors=cerrors, units=units)
         return
@@ -597,7 +597,7 @@ class ExperimentalDataSet(DataSet):
     """
     def __init__(self, values, verrors, coords, cerrors, units):
         """"""
-        super(ExperimentalData, self).__init__(coords=coords, values=values,
+        super().__init__(coords=coords, values=values,
                                                verrors=verrors,
                                                cerrors=cerrors, units=units)
         return
@@ -666,7 +666,7 @@ class Calculation(DataSet):
     pass
     #def __init__(self, coords, values, units, errors=None):
         #""""""
-        #super(Calculation, self).__init__(coords=coords, values=values, units=units, errors=errors) 
+        #super().__init__(coords=coords, values=values, units=units, errors=errors)
         #return
     ##
 
@@ -727,7 +727,7 @@ class Resistivity(ExperimentalDataSlice):
     pass
 
 
-class StructureFactorModel(object):
+class StructureFactorModel:
     """
     TODO:
     <done> The standard is for the squared structure factor to be input at this point.
@@ -747,7 +747,7 @@ class StructureFactorModel(object):
         Would need to be generalized to work everywhere, or be sure to overwrite for more complex (mulitdimensional) data
         """
         idx = np.equal(key, self.coords)        
-        if self.errors.dtype is np.dtype(object):
+        if self.errors.dtype == np.dtype(object):
             if self.values.shape == self.coords.shape:
                 return self.values[idx].reshape(self.coords.shape)
             else:
@@ -762,7 +762,7 @@ class StructureFactorModel(object):
         FIX!!!
         """
         idx = np.equal(key, self.coords)        
-        if self.errors.dtype is np.dtype(object):
+        if self.errors.dtype == np.dtype(object):
             if self.values.shape == self.coords.shape:
                 idx = np.asanyarray(idx.prod(1).reshape(self.values.shape[0])) # Needs to be generalized!
                 self.values[idx,:] = value
@@ -852,7 +852,9 @@ class StructureFactorModel(object):
             elif plane=='hhl':
                 plt.xlabel('HH0')
                 plt.ylabel('00L')
-            if planning: plt.title('k_i: '+str(kwargs['ki'])+' inv. Ang. \n E_i: '+str(2.072*kwargs['ki']**2.)+' meV')
+            if planning:
+                ki = kwargs.get('ki', 0)
+                plt.title(f'k_i: {ki} inv. Ang. \n E_i: {2.072*ki**2.} meV')
             plt.colorbar()        
 
         if planning: 
@@ -906,11 +908,11 @@ class StructureFactorModel(object):
         headers = [r'Q (r.l.u.)', r'Q (\AA$^{-1}$)', r'd (\AA)', r'|F(Q)|$^2$']
         coords = []
         for coord in self.coords:
-            coords.append('('+str(coord[0])+', '+str(coord[1])+', '+str(coord[2])+')')
+            coords.append(f'({coord[0]}, {coord[1]}'+f', {coord[2]})')
         coords = np.array(coords)
         
         dat = [coords, QA, 2.*np.pi / np.linalg.norm(QA,axis=-1), self.values]
-        headers = ['Q (r.l.u.)', 'd (\AA)', '|F(Q)|$^{2}$']
+        headers = ['Q (r.l.u.)', r'd (\AA)', r'|F(Q)|$^{2}$']
         dat = [coords, 2.*np.pi / np.linalg.norm(QA,axis=-1), self.values]        
         
         # Sort in order of descending peak intensity.
@@ -1000,11 +1002,11 @@ class StructureFactor(Data):
         headers = [r'Q (r.l.u.)', r'Q (\AA$^{-1}$)', r'd (\AA)', r'|F(Q)|$^2$']
         coords = []
         for coord in self.coords:
-            coords.append('('+str(coord[0])+', '+str(coord[1])+', '+str(coord[2])+')')
+            coords.append(f'({coord[0]}, {coord[1]}'+f', {coord[2]})')
         coords = np.array(coords)
         
         dat = [coords, QA, 2.*np.pi / np.linalg.norm(QA,axis=-1), self.values]
-        headers = ['Q (r.l.u.)', 'd (\AA)', '|F(Q)|$^{2}$']
+        headers = ['Q (r.l.u.)', r'd (\AA)', r'|F(Q)|$^{2}$']
         dat = [coords, 2.*np.pi / np.linalg.norm(QA,axis=-1), self.values]        
         
         # Sort in order of descending peak intensity.
@@ -1021,7 +1023,7 @@ class MagneticStructureFactorModel(StructureFactorModel):
     #def __init__(self, coords, values, units, errors=None):
         #""""""
         ##assert(values.dtype is np.dtype(complex))        
-        #super(MagneticStructureFactorModel, self).__init__(coords=coords, values=values, units=units, errors=errors)       
+        #super().__init__(coords=coords, values=values, units=units, errors=errors)
         #return
     ##
     def zeros(self, units=None, Q=None):
@@ -1042,7 +1044,7 @@ class NuclearStructureFactorModel(StructureFactorModel):
         #""""""
         ##assert(values.dtype is np.dtype(complex)) 
         #print type(self)
-        #super(NuclearStructureFactorModel, self).__init__(coords=coords, values=values, units=units, errors=errors)       
+        #super().__init__(coords=coords, values=values, units=units, errors=errors)
         #return
     #
     def zeros(self, units=None, Q=None):
@@ -1255,7 +1257,7 @@ class NeutronSpectroscopy(Spectroscopy):
             ki = np.asanyarray([0, 0, ki_mag]) # (get the vector first; this is a good reason among others to make a wavevector object, with mag., units, etc.!)
             R = np.array([[np.cos(w), 0, np.sin(w)], [0, 1, 0], [-np.sin(w), 0, np.cos(w)]]) # rotation around the y-axis for now. To be generalized to properly represent all crystal frames. (?need it be here?)
             ki = np.dot(ki,R) # opposite rotation for ki than for w (same as doing the transpose of R)
-            ki = repmat(ki.transpose(), Qt.shape[0], Qt.shape[1]).reshape(*Qt.shape)
+            ki = np.tile(ki.transpose(), (Qt.shape[0], Qt.shape[1], 1))
             kf = Qt + ki
             Qt_abs = np.linalg.norm(Qt, axis=-1)
             ki_abs =  np.linalg.norm(ki, axis=-1)
@@ -1403,7 +1405,7 @@ class NeutronScan(ExperimentalDataSlice):
             gfit = GaussianModel(coords, y, params, yerrs=ye) 
             gfit.auto_min()#mini_kwargs={'params':params}
             
-            model_id = 'GaussianModel_'+str(key)+'_'
+            model_id = f'GaussianModel_{key}_'
             self.attrs[model_id+'_fit'] = OrderedDict()
             gmf = self.attrs[model_id+'_fit']
             gmf['object'] = gfit
@@ -1415,7 +1417,7 @@ class NeutronScan(ExperimentalDataSlice):
             else:
                 self.attrs['isGoodFit'] = False
                 warnings.warn('Fit is above redchi = 5.!')
-                print("redchi = "+str(redchi))
+                print(f"redchi = {redchi}")
             
             if show or save:
                 ax, fig, pbl = self.plot(save=save, show=show, gfxpath=gfxpath,

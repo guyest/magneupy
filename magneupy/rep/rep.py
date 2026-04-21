@@ -1,6 +1,7 @@
 import numpy
 import string, inspect, re, fnmatch, pandas
-from collections import Iterable, namedtuple, OrderedDict, deque
+from collections import namedtuple, OrderedDict, deque
+from collections.abc import Iterable
 
 class Rep(OrderedDict):
     """
@@ -32,7 +33,7 @@ class BasisVector(numpy.ndarray):
         obj.Nrep = Nrep
         obj.Natom = Natom   
         obj.Nunique_atom = Nunique_atom
-        obj.name = 'atom'+str(Natom)+'_'+str(Nunique_atom)
+        obj.name = f'atom{Natom}_{Nunique_atom}'
         # Finally, we must return the newly created object:
         return obj  
     
@@ -67,9 +68,9 @@ class BasisVectorGroup(OrderedDict):
         self.Nirrep = Nirrep
         #assert isinstance(IR, Irrep)
         #self.IR = IR
-        #super(BasisVectorGroup, self).__init__()
+        #super().__init__()
         # Set the coefficient to a default value:
-        self.name = 'psi'+str(Nbv)+'_'+str(Nunique_atom)
+        self.name = f'psi{Nbv}_{Nunique_atom}'
         self.setBasisVectors(basisvectors)
         self.set_key()
         
@@ -109,7 +110,7 @@ class BasisVectorGroup(OrderedDict):
         return m
 
     def set_key(self):
-        G = 'G'+str(self.Nirrep)
+        G = f'G{self.Nirrep}'
         bvg = self.name
         self.key = G+'_'+bvg
 
@@ -237,7 +238,7 @@ class Irrep(OrderedDict):
         if name is not None:
             self.name = name
         else:
-            self.name = 'G'+str(self.N)
+            self.name = f'G{self.N}'
         return
 
     def addBasisVectorGroup(self, frac_coord, psi):
@@ -271,7 +272,7 @@ class Irrep(OrderedDict):
         return repr(self.name)
 
     def __str__(self):
-        return str(self.copies)+'$\Gamma_{'+str(self.N)+'}^{'+str(self.order)+'}'
+        return rf"{self.copies}$\Gamma_{{{self.N}}}^{{{self.order}}}$"
 
 
 class Corep(Irrep):
@@ -321,7 +322,7 @@ class RepGroup(OrderedDict):
         * Add ability to input reps as a list and pull the names for dictionary labels
         """
         self.setFamilyName()
-        super(RepGroup, self).__init__()
+        super().__init__()
         
         self.basisvectorgroup = basisvectorgroup
         self.bvg = self.basisvectorgroup # alias
@@ -369,7 +370,7 @@ class RepGroup(OrderedDict):
         """
         This method sets the parent reference of NuclearStructures to a Cystal and returns an AssertionError if the parent is of the wrong type
         """    
-        errmsg = 'RepGroups expect a Crystal or RepCollection object as parent. Plase give an appropiate object to reference.'
+        errmsg = 'RepGroups expect a Crystal or RepCollection object as parent. Please give an appropriate object to reference.'
         errmsg = kwargs['errmsg'] if 'errmsg' in kwargs else errmsg
         
         types  = (RepCollection, Crystal)
@@ -448,7 +449,7 @@ class MagRepGroup(OrderedDict):
             
         # Ready the input
         self.setReps(reps) # also claims reps as children      
-        #super(MagRepGroup, self).__init__(reps=reps, crystal=crystal, repcollection=repcollection, rcname='magrepcollection')
+        #super().__init__(reps=reps, crystal=crystal, repcollection=repcollection, rcname='magrepcollection')
         self.mrc = self.magrepcollection
         if sarahfile is not None: 
             self.readSarahSummary(sarahfile)
@@ -489,14 +490,14 @@ class MagRepGroup(OrderedDict):
         TODO:
         * Needs to be finished passing on and correlating the information...
         """
-        #if 'G'+str(Nirrep) in self.keys():
+        #if f'G{Nirrep}' in self.keys():
         if Nrep:
             pass
         if Nirrep:
             Nrep = Nirrep
             print('use `Nrep=value` instead of `Nirrep`. the later is depricated.')
 
-        self['G'+str(Nrep)]['psi'+str(Nbv)+'_'+str(Nunique_atom)].addBasisVector(bv)
+        self[f'G{Nrep}'][f'psi{Nbv}_{Nunique_atom}'].addBasisVector(bv)
         
         return
 
@@ -505,7 +506,7 @@ class MagRepGroup(OrderedDict):
             Nrep = self.IR0
         if Nbv is None:
             Nbv = self.bv0
-        bv = self['G'+str(Nrep)]['psi'+str(Nbv)+'_'+str(Nunique)]['atom'+str(Nat)+'_'+str(Nunique)]
+        bv = self[f'G{Nrep}'][f'psi{Nbv}_{Nunique}'][f'atom{Nat}_{Nunique}']
         return bv
 
     def sarah2pyRep(self, lines, lid=None, **kwargs):
@@ -545,13 +546,13 @@ class MagRepGroup(OrderedDict):
             
             Nirreps = []
             Oirreps = []
-            while len(deq) is not 0:
+            while len(deq) != 0:
                 Nirrep, _1, Oirrep = deq.popleft().partition(':')
                 Nirrep = int(Nirrep)
                 Oirrep = int(Oirrep)
                 Nirreps.append(Nirrep)
                 Oirreps.append(Oirrep)
-                self['G'+str(Nirrep)] = Irrep(qm=self.qm, sg=None, N=Nirrep, Natoms=None, 
+                self[f'G{Nirrep}'] = Irrep(qm=self.qm, sg=None, N=Nirrep, Natoms=None,
                                         copies=None, 
                                         order=Oirrep, 
                                         bvg=None)            
@@ -602,7 +603,7 @@ class MagRepGroup(OrderedDict):
                 
                 # Grab the coordinate of the atom
                 dx, dy, dz = tuple(re.findall(r'[.]?\d+', d))
-                ds[str(Natom)+'_'+str(Nunique_a)] = numpy.asanyarray([float(dx),float(dy),float(dz)])   
+                ds[str(Natom)+f'_{Nunique_a}'] = numpy.asanyarray([float(dx),float(dy),float(dz)])
             return ds, Natoms
 
     def readSarahSummary(self, filename):
@@ -665,7 +666,7 @@ class MagRepGroup(OrderedDict):
             subl_irrep = deque(fnmatch.filter(a_lines, 'IR #*, BASIS VECTOR: #*(ABSOLUTE NUMBER:#*)'))
             # This starts each BVG then find all the atom lines between this and the '******' line to add to a single basis vector number (Nbv)
             
-            while len(subl_irrep) is not 0:
+            while len(subl_irrep) != 0:
                 """
                 TODO:
                 * Handle flags for when to increase the Atom#, etc. in this loop through the file so we know where to look for the fractional coordiantes.
@@ -678,7 +679,7 @@ class MagRepGroup(OrderedDict):
                 Nirrep, Nbv, Nbv_abs = [int(s) for s in re.findall(r'\d+', l)]  
                 
                 # Add a BasisVectorGroup to the Irrep for each set of atoms sharing a basis vector
-                self['G'+str(Nirrep)]['psi'+str(Nbv)+'_'+str(Nunique_a)] = BasisVectorGroup(basisvectors=[], 
+                self[f'G{Nirrep}'][f'psi{Nbv}_{Nunique_a}'] = BasisVectorGroup(basisvectors=[],
                                                         Nbv=Nbv, Nunique_atom=Nunique_a,
                                                         names=None, 
                                                         orbit=None)
@@ -689,13 +690,13 @@ class MagRepGroup(OrderedDict):
                 deq = deque(lines[start:stop])
                 
                 # Go through the deque and add the basis vector values to the MagRepGroup
-                while len(deq) is not 0:
+                while len(deq) != 0:
                     line = deq.popleft()
                     #print line
                     if ('*' not in line) and ('#' not in line):
                         bv, Natom = self.sarah2pyRep(line, lid='ATOM-IR')
                         assert(Natom <= Natoms)
-                        bv = BasisVector(bv, d=ds[str(Natom)+'_'+str(Nunique_a)], Nbv=Nbv, Nrep=Nirrep, Natom=Natom, Nunique_atom=Nunique_a)
+                        bv = BasisVector(bv, d=ds[str(Natom)+f'_{Nunique_a}'], Nbv=Nbv, Nrep=Nirrep, Natom=Natom, Nunique_atom=Nunique_a)
                         self.addBasisVector(bv, Nirrep, Nbv, Nunique_a, Natom)
                     else:
                         pass
@@ -733,10 +734,10 @@ class MagRepGroup(OrderedDict):
             ct = 0
             for dim in dims:
                 ct += 1
-                if "("+str(ct)+")" in decomp_string:
+                if f"({ct})" in decomp_string:
                     Oirreps.append(dim)
                     Nirreps.append(ct)
-                    self['G' + str(ct)] = Irrep(qm=self.qm, sg=None, N=ct, Natoms=None, copies=None,
+                    self[f'G{ct}'] = Irrep(qm=self.qm, sg=None, N=ct, Natoms=None, copies=None,
                                                     order=dim, bvg=None)
             return Nirreps, Oirreps
         return
@@ -771,7 +772,7 @@ class MagRepGroup(OrderedDict):
         ct = 0
         for atom in magnetic.magatoms.values():
             ct += 1
-            ds[str(ct)+"_"+str(Nunique_a)] = atom.d
+            ds[str(ct)+f"_{Nunique_a}"] = atom.d
         Natoms = ct
 
         lines = deque(fp)
@@ -793,12 +794,12 @@ class MagRepGroup(OrderedDict):
                 for q in range(N):
                     #print(q)
                     bv = numpy.array(r[3*q:3*(q+1)]) + 1j * numpy.array(i[3*q:3*(q+1)])
-                    bv = BasisVector(bv, d=ds[str(nat) + '_' + str(Nunique_a)], Nbv=q, Nrep=Nirrep, Natom=nat,
+                    bv = BasisVector(bv, d=ds[str(nat) + f'_{Nunique_a}'], Nbv=q, Nrep=Nirrep, Natom=nat,
                                  Nunique_atom=Nunique_a)
                     try:
-                        self['G' + str(Nirrep)]['psi' + str(q) + '_' + str(Nunique_a)]
+                        self[f'G{Nirrep}'][f'psi{q}_{Nunique_a}']
                     except KeyError:
-                        self['G' + str(Nirrep)]['psi' + str(q) + '_' + str(Nunique_a)] = BasisVectorGroup(
+                        self[f'G{Nirrep}'][f'psi{q}_{Nunique_a}'] = BasisVectorGroup(
                             basisvectors=[], Nbv=q, Nunique_atom=Nunique_a, names=None, orbit=None)
                     self.addBasisVector(bv, Nirrep, q, Nunique_a, nat)
             if " ----- End-of-block of lines for PCR \n" in l:
@@ -817,7 +818,7 @@ class MagRepGroup(OrderedDict):
         else:
             if Nrep is None: Nrep = self.IR0
             if Nbv is None: Nbv = self.bv0
-            bvg = list(self['G'+str(Nrep)].values())[Nbv]
+            bvg = list(self[f'G{Nrep}'].values())[Nbv]
             m = bvg.getMagneticMoment(d)
         return m
 
@@ -829,9 +830,23 @@ class MagRepGroup(OrderedDict):
 
     def setParents(self, parents):
         """"""
-        errmsg = 'MagRepGroups expect a Crystal or MagRepCollection object as parent. Plase give an appropiate object to reference.'
-        types = (MagRepCollection,Crystal)
-        super(MagRepGroup, self).__setParents__(parents, errmsg=errmsg, types=types)
+        from ..material import Crystal
+        errmsg = 'MagRepGroups expect a Crystal or MagRepCollection object as parent. Please give an appropriate object to reference.'
+        types = (MagRepCollection, Crystal)
+        # Assuming __setParents__ was intended to be setParents from a base class if it existed,
+        # but RepGroup has setParents. MagRepGroup doesn't inherit from RepGroup anymore in the code above?
+        # Wait, in the provided code, MagRepGroup inherits from OrderedDict, but NucRepGroup inherits from RepGroup.
+        # Let's check RepGroup. MagRepGroup init has a commented out super call to RepGroup.
+        # Actually MagRepGroup seems to have its own implementation.
+
+        if hasattr(parents, '__iter__'):
+            for parent in parents:
+                if parent is None: pass
+                elif not isinstance(parent, types): raise TypeError(errmsg)
+                else: setattr(self, parent.familyname, parent)
+                parent.setChild(self)
+        else:
+            self.setParents([parents])
         return
 
     def claimChildren(self, family = ['basisvectorcollection', 'basisvectorgroup'], child=None):

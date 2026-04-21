@@ -35,9 +35,8 @@ def getFamilyAttributes(obj, family, return_labels=False):
 
 def stripDigits(name):
     """"""
-    pstr = string.digits
-    name = name.encode('ascii','ignore')
-    allNames = string.maketrans('','')
-    nodig = allNames.translate(allNames, pstr)
-    name = name.translate(allNames, nodig)
+    if isinstance(name, str):
+        return ''.join([i for i in name if not i.isdigit()])
+    elif isinstance(name, bytes):
+        return name.translate(None, string.digits.encode('ascii'))
     return name
