@@ -15,7 +15,7 @@ from .data.data import StructureFactorModel, NuclearStructureFactorModel
 rec2pol = np.vectorize(polar)
 
 
-class Atom(object):
+class Atom:
     """
     ...
     ----------
@@ -128,7 +128,7 @@ class AtomGroup(OrderedDict):
     """
     def __init__(self, atoms=None, name=None, parent=None):
         """"""
-        super(AtomGroup, self).__init__()
+        super().__init__()
         self.name = name
         #if atoms is not None:
         #atoms = self.checkAtoms(atoms)
@@ -149,7 +149,7 @@ class AtomGroup(OrderedDict):
         return atoms
 
 
-class NuclearStructure(object):
+class NuclearStructure:
     """
     """
     # Set the initial state for various fields
@@ -185,7 +185,7 @@ class NuclearStructure(object):
             cifblock  = ciffile.data[cfkeys]
 
             # obtain the final object from which to pull the pertinent info
-            struc     = cifparser.get_structures(False)[0]
+            struc     = cifparser.parse_structures(primitive=False)[0]
 
             # Set the lattice definition parameters
             self.setLattice(struc)
@@ -313,16 +313,10 @@ class NuclearStructure(object):
 
     def rlu2ang(self, Q):
         """
-        TODO:
-        * Needs to be generalized! (Move it up to crystal level)
-        * Be more careful about modifying the value. Give an option or change the name
+        Convert reciprocal lattice units (rlu) to inverse Angstroms.
         """
-
-        Q[:,0] = Q[:,0]*2.*np.pi/self.a
-        Q[:,1] = Q[:,1]*2.*np.pi/self.b
-        Q[:,2] = Q[:,2]*2.*np.pi/self.c
-
-        return Q
+        Q = np.asanyarray(Q)
+        return Q * (2.0 * np.pi / np.array([self.a, self.b, self.c]))
 
     @staticmethod
     def makeQ(Qmax=4, firstQuad=False, sym=True, plane='hhl'):
@@ -447,12 +441,12 @@ class NuclearStructure(object):
 
             if squared:
                 Fn2 = scale_factor*(np.abs(Fn)**2.)
-                #print("Square structure factor for "+str(Q)+" is:"+str(Fn2))
+                #print(f"Square structure factor for {Q} is:{Fn2}")
                 return Fn2
                 # Units are in barn/sr; Internally modifed by periodictable.
 
             else:
-                #print("Structure factor for "+str(Q)+" is:"+str(Fn))
+                #print(f"Structure factor for {Q} is:{Fn}")
                 return np.sqrt(scale_factor)*Fn
 
     def claimChildren(self, family=['atoms']):
@@ -486,14 +480,14 @@ class NuclearStructure(object):
                 elif not isinstance(parent, types): raise TypeError(errmsg)
                 else: setattr(self, parent.familyname, parent)
                 parent.setChild(self)
-                if getattr(parent, self.familyname) is self: print(str(parent.familyname) + ' is Parent to ' + str(self.familyname))
-                if getattr(self, parent.familyname) is parent: print(str(self.familyname) + ' is Child to ' + str(parent.familyname))
+                if getattr(parent, self.familyname) is self: print(str(parent.familyname) + f' is Parent to {self.familyname}')
+                if getattr(self, parent.familyname) is parent: print(str(self.familyname) + f' is Child to {parent.familyname}')
         else:
             self.setParents([parents])
         return
 
 
-class Crystal(object):
+class Crystal:
     """
     A Crystal object is a collection of a NuclearStructure and its subclasses.
     TODO:
@@ -501,6 +495,7 @@ class Crystal(object):
     * Need a specified set<obj> function for each Child object that also associates with the Parent crystal. 
     * Allow input of CIF, MCIF (eventually), Sarah (eventually), etc. files in order to generate the whole Crystal from scatch
     """
+    familyname = 'crystal'
     _maginit = {}  # type: typing.Mapping[str,list]
 
     def __init__(self, cif=None, maginfo=None, cifname=None, charge=None, magrepgroup=None, nucrepgroup=None,
@@ -640,9 +635,9 @@ class Crystal(object):
         Q = np.hstack((H,K,L,))
         if typstr is None:
             print("Please input the type string for the structure factor: 'nuc' or 'mag'.")
-        elif typstr is ('nuc' or 'nuclear'):
+        elif typstr in ('nuc', 'nuclear'):
             self.setStructureFactor(Qn=Q, Fn_exp=F, Fn_err=Ferr)
-        elif typstr is ('mag' or 'magnetic'):
+        elif typstr in ('mag', 'magnetic'):
             self.setStructureFactor(Qm=Q, Fm_exp=F, Fm_err=Ferr)
         else:
             print("No valid input type string. Sorry!")
@@ -662,7 +657,7 @@ class Crystal(object):
             # For each irrep...
             if Nreps_fit.count(irrep.N) > 0:
                 Nreps.append(irrep.N)
-                print('Fitting Irrep #G'+str(irrep.N))
+                print(f'Fitting Irrep #G{irrep.N}')
                 for bvg in list(irrep.values()):
                     # Add a parmeter for each basis vector (group)...
                     name = irrep.name+'_'+bvg.name
@@ -702,15 +697,15 @@ class Crystal(object):
         return
 
     def calc_Fm(self, Nrep=2, bvs=[2], mu=1.5, **kwargs):
-        rep_name = 'G'+str(Nrep)
+        rep_name = f'G{Nrep}'
         rep_names=[]
         for bv in bvs:
-            rep_names.append(rep_name+'_psi'+str(bv))
+            rep_names.append(rep_name+f'_psi{bv}')
 
         coeffs={}
         for i_ in range(len(self.magnetic.magatoms)):
             for rn_ in rep_names:
-                coeffs[rn_+'_'+str(i_+1)]=mu
+                coeffs[rn_+f'_{i_+1}']=mu
 
         self.getMagneticMoments(Nrep=Nrep, bvs=bvs, coeffs=coeffs)
         Fm = self.magnetic.getMagneticStructureFactor(Qm=self.Qm, squared=True)

@@ -6,12 +6,29 @@ from lmfit import Minimizer
 import tempfile
 import platform
 import sh
-if platform.system() in ['Linux', 'linux', 'linux2', 'linux4']:
-    basireps = sh.Command('./basireps_linux')
-elif platform.system() in ['macOS', 'Mac', 'darwin', 'Darwin']:
-    basireps = sh.Command('./basireps_mac')
-elif platform.system() in ['Windows']:
-    basireps = sh.Command('./basireps_win')
+import os
+
+def get_basireps_command():
+    system = platform.system()
+    if system in ['Linux', 'linux', 'linux2', 'linux4']:
+        cmd = './basireps_linux'
+    elif system in ['macOS', 'Mac', 'darwin', 'Darwin']:
+        cmd = './basireps_mac'
+    elif system in ['Windows']:
+        cmd = 'basireps_win.exe'
+    else:
+        cmd = 'basireps'
+
+    if os.path.exists(cmd):
+        return sh.Command(cmd)
+    else:
+        # Try to find it in PATH
+        try:
+            return sh.Command('basireps')
+        except sh.CommandNotFound:
+            return None
+
+basireps = get_basireps_command()
 
 tempfile.tempdir = '/var/tmp'
 
@@ -45,8 +62,8 @@ class MagAtom(Atom):
                 self.label = label
         else:
             # Create a new atom from input and copy it to the magatom
-            Atom(elname, label=label)
-            self.__dict__.update(atom.__dict__)
+            new_atom = Atom(elname, oxidation=0, label=label)
+            self.__dict__.update(new_atom.__dict__)
 
         self.gj = gj
         self.mu  = mu
@@ -110,8 +127,26 @@ class MagAtom(Atom):
 
         # Return the form factor
         Q = np.sqrt(np.sum(np.square(Qm),axis=1))
-        j0 = element.ion[charge].magnetic_ff[charge_key].j0_Q(Q)
-        j2 = element.ion[charge].magnetic_ff[charge_key].j2_Q(Q)
+        # Ensure charge and charge_key are integers for periodictable
+        try:
+            charge_val = int(charge)
+        except (ValueError, TypeError):
+            charge_val = None
+        try:
+            charge_key_val = int(charge_key)
+        except (ValueError, TypeError):
+            charge_key_val = 0
+        if charge_val is not None:
+            try:
+                ion = element.ion[charge_val]
+                j0 = ion.magnetic_ff[charge_key_val].j0_Q(Q)
+                j2 = ion.magnetic_ff[charge_key_val].j2_Q(Q)
+            except (KeyError, ValueError):
+                j0 = element.magnetic_ff[charge_key_val].j0_Q(Q)
+                j2 = element.magnetic_ff[charge_key_val].j2_Q(Q)
+        else:
+            j0 = element.magnetic_ff[charge_key_val].j0_Q(Q)
+            j2 = element.magnetic_ff[charge_key_val].j2_Q(Q)
         if orbital:
             fQ = (gS*j0 + gL*j0 + gL*j2)/gJ #Lovesey, Eq. 7.26 for full J
         else:
@@ -225,7 +260,7 @@ class MagAtomGroup(AtomGroup):
         """
         FIX > self is now the dict (not list)
         """
-        super(MagAtomGroup, self).__init__()
+        super().__init__()
         if magatoms is not None: self.magatoms = list(magatoms)
         self.setqms()
         return
@@ -444,6 +479,8 @@ class MagneticStructure(NuclearStructure):
             Fm =   np.cross(Qh, np.cross(Fm, Qh))
 
             if update:
+                if not hasattr(self, "Fm"):
+                    self.setMagneticStructureFactor(Q=Qm)
                 #self.setMagneticStructureFactor(Q=Qm)
                 self.Fm.values = Fm
                 self.Fm.coords = Qm
@@ -484,7 +521,7 @@ class MagneticStructure(NuclearStructure):
         # vector direction
         coeffs = {}
         coeffs.update(params.valuesdict())
-        irrep=self.crystal.magrepgroup['G'+str(Nrep)]
+        irrep=self.crystal.magrepgroup[f'G{Nrep}']
         for bvg in list(irrep.values()):
             name = irrep.name+'_'+bvg.name
             try:
@@ -494,8 +531,8 @@ class MagneticStructure(NuclearStructure):
         # moment size
         _cnt = 1
         for magatom in list(self.magatoms.values()):
-            magatom.setMomentSize(params['mu'+str(_cnt)])
-            magatom.setPhase(params['phi'+str(_cnt)])
+            magatom.setMomentSize(params[f'mu{_cnt}'])
+            magatom.setPhase(params[f'phi{_cnt}'])
             magatom.addMoment(self.magrepgroup.getMagneticMoment(d=magatom.d,Nrep=Nrep))
             _cnt+=1
 
@@ -504,41 +541,42 @@ class MagneticStructure(NuclearStructure):
 
     def rlu2ang(self, Q):
         """
-        TODO:
-        * implement so that lattice constants are accessed at the crystal level.
+        Convert reciprocal lattice units (rlu) to inverse Angstroms.
         """
-        Q = np.asanyarray(Q)
-        N = len(Q.shape)
-        if N == 1:
-            Q = Q.reshape((1,3))
-        vec = 2*np.pi/np.array([self.nuclear.a, self.nuclear.b, self.nuclear.c])
-        Q = np.stack(list(map(np.diag, np.einsum('...i,j', Q, vec))))
-        #Q[:,0] = np.reshape(Q[:,0]*2.*np.pi/self.nuclear.a, Q.shape)
-        #print(Q[:,0]*2.*np.pi/self.nuclear.a)
-        #Q[:,1] = Q[:,1]*2.*np.pi/self.nuclear.b
-        #Q[:,2] = Q[:,2]*2.*np.pi/self.nuclear.c
-        #print(Q)
-        return Q
+        return self.nuclear.rlu2ang(Q)
 
     def gen_smb(self):
         smb = []
         smb.append('TITLE ' + self.crystal.name + '\n')
         smb.append('SPGR ' + self.crystal.spacegroup + '\n')
-        smb.append('KVEC ' + str(self.qm).strip('[]') + '\n')
-        smb.append('SUBL ' + self.magname + ' ' + str(len(self.magatoms)) + '\n')
+        smb.append(f'KVEC {str(self.qm).strip("[]")}\n')
+        smb.append(f'SUBL {self.magname} {len(self.magatoms)}\n')
         for ma in self.magatoms.values():
-            smb.append('At ' + str(ma.d).strip('[]') + '\n')
+            smb.append(f'At {str(ma.d).strip("[]")}\n')
         smb.append('BASIR AXIAL CEL\n')
         self.smb = smb
         return
 
     def gen_basireps(self):
         """"""
+        if basireps is None:
+            print("Warning: basireps command not found. Skipping representation analysis.")
+            self.fp = []
+            self.bsr = []
+            return
+
         # open a temporary directory and perform calculations using BasIreps
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(tmpdir + '/bas.smb', 'w') as f:
                 f.writelines(self.smb)
-            basireps(tmpdir + '/bas.smb')
+            try:
+                basireps(tmpdir + '/bas.smb')
+            except Exception as e:
+                print(f"Error running basireps: {e}")
+                self.fp = []
+                self.bsr = []
+                return
+
             with open(tmpdir + '/bas.fp', 'r+') as f:
                 f.seek(0)
                 self.fp = f.readlines()
@@ -551,7 +589,7 @@ class MagneticStructure(NuclearStructure):
         """
         This function sets the Children according to the NuclearStructure defintion
         """
-        super(MagneticStructure, self).claimChildren(family=family)
+        super().claimChildren(family=family)
         return
 
     def setParents(self, parents):
@@ -566,9 +604,12 @@ class MagneticStructure(NuclearStructure):
                 if parent is None: pass
                 elif not isinstance(parent, types): raise TypeError(errmsg)
                 else: setattr(self, parent.familyname, parent)
-                parent.setChild(self)
-                if getattr(parent, self.familyname) is self: print(str(parent.familyname) + ' is Parent to ' + str(self.familyname))
-                if getattr(self, parent.familyname) is parent: print(str(self.familyname) + ' is Child to ' + str(parent.familyname))
+                if parent is not None:
+                    parent.setChild(self)
+                if parent is not None and getattr(parent, self.familyname) is self:
+                    print(f'{parent.familyname} is Parent to {self.familyname}')
+                if parent is not None and getattr(self, parent.familyname) is parent:
+                    print(f'{self.familyname} is Child to {parent.familyname}')
         else:
             self.setParents([parents])
         return

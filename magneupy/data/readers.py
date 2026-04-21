@@ -38,7 +38,7 @@ class DataContainer(OrderedDict):
         return
         #
 #
-class DataReader(object):
+class DataReader:
     """
     A DataReader object is a custom reader for a specific output data file. 
     TODO:
@@ -82,7 +82,7 @@ class DataReader(object):
         return
         #
 #
-class DataSource(object):
+class DataSource:
     """"""
     def __init__(self, origin, kind=None):
         """
